@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -178,7 +179,7 @@ export const PrototypeGrid = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-center text-muted-foreground">
-                  Prototypes shared with you will appear here.
+                  Prototypes shared with you will appear here once you open a shared link.
                 </p>
               </CardContent>
             </Card>

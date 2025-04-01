@@ -36,9 +36,12 @@ export function usePrototypeData(
 
         // Filter based on if we're looking for user's own prototypes or shared ones
         if (sharedWithMe) {
-          // Logic for shared prototypes - this is a simplified example
-          // In a real app, you'd have a proper sharing mechanism with a join table
-          query = query.neq('created_by', userId);
+          // For "Shared with me" tab, we should only show prototypes that have been
+          // explicitly shared with the user and viewed by them
+          // This implementation assumes there's a table that tracks shared prototypes
+          // Since there isn't an explicit sharing mechanism yet, we'll show no results
+          // until proper sharing functionality is implemented
+          return [];
         } else {
           query = query.eq('created_by', userId);
         }
