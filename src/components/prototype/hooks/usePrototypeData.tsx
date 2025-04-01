@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,8 +42,8 @@ export function usePrototypeData(
             return [];
           }
           
-          // Use type assertion to handle the data
-          const typedSharedPrototypeIds = sharedPrototypeIds as { prototype_id: string }[];
+          // Fixed: Using double type assertion to avoid TypeScript errors
+          const typedSharedPrototypeIds = sharedPrototypeIds as unknown as { prototype_id: string }[];
           
           // Get the actual prototypes
           const { data: sharedPrototypes, error: prototypesError } = await supabase

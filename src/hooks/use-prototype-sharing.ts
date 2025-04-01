@@ -1,4 +1,3 @@
-
 import { useToast } from "./use-toast";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -31,8 +30,8 @@ export function usePrototypeSharing(prototypeId: string) {
         throw error;
       }
 
-      // Add explicit type assertion here
-      return (data || []) as PrototypeShare[];
+      // Fixed: Using double type assertion to avoid TypeScript errors
+      return (data || []) as unknown as PrototypeShare[];
     }
   });
 
@@ -49,7 +48,8 @@ export function usePrototypeSharing(prototypeId: string) {
         .eq('email', shareData.email)
         .eq('is_link_share', false);
 
-      const typedExistingShares = existingShares as { id: string }[] | null;
+      // Fixed: Using double type assertion to avoid TypeScript errors
+      const typedExistingShares = existingShares as unknown as { id: string }[] | null;
 
       if (typedExistingShares && typedExistingShares.length > 0) {
         // Update existing share instead
@@ -112,7 +112,8 @@ export function usePrototypeSharing(prototypeId: string) {
         .eq('prototype_id', prototypeId)
         .eq('is_link_share', true);
 
-      const typedExistingShares = existingShares as { id: string }[] | null;
+      // Fixed: Using double type assertion to avoid TypeScript errors
+      const typedExistingShares = existingShares as unknown as { id: string }[] | null;
       
       const { data: userData } = await supabase.auth.getSession();
       

@@ -64,7 +64,7 @@ export const PrototypeDetail = () => {
         }
         
         // Update access timestamp
-        const typedShareData = shareData as PrototypeShare[];
+        const typedShareData = shareData as unknown as PrototypeShare[];
         if (typedShareData[0] && typedShareData[0].id) {
           await supabase
             .from('prototype_shares' as any)
@@ -78,14 +78,12 @@ export const PrototypeDetail = () => {
     enabled: !!id && !!currentUserId
   });
 
-  // If not logged in, redirect to auth
   useEffect(() => {
     if (!session && !isLoading) {
       navigate('/auth');
     }
   }, [session, isLoading, navigate]);
 
-  // Handle share action
   const handleShare = useCallback(() => {
     setShowShareDialog(true);
   }, []);
