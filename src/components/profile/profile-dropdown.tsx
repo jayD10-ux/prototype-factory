@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   DropdownMenu, 
@@ -29,7 +29,7 @@ export function ProfileDropdown() {
   });
 
   // Fetch user profile data when component mounts
-  useState(() => {
+  useEffect(() => {
     const fetchProfileData = async () => {
       if (!session?.user?.id) return;
       
@@ -54,7 +54,7 @@ export function ProfileDropdown() {
     };
     
     fetchProfileData();
-  }, [session]);
+  }, [session, supabase]);
 
   const handleLogout = async () => {
     try {

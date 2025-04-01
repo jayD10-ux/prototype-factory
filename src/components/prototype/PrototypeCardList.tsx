@@ -45,6 +45,12 @@ export function PrototypeCardList({
     );
   }
 
+  // Handler for removing a prototype from a collection (no-op for now)
+  const handleRemoveFromCollection = (prototypeId: string, collectionId: string) => {
+    console.log(`Remove prototype ${prototypeId} from collection ${collectionId}`);
+    // Actual removal logic would go here
+  };
+
   return (
     <div
       className={`grid gap-4 ${
@@ -130,7 +136,9 @@ export function PrototypeCardList({
                 {prototypeCollectionIds.map((collectionId) => (
                   <PrototypeCollectionTag
                     key={collectionId}
+                    prototypeId={prototype.id}
                     collectionId={collectionId}
+                    onRemove={() => handleRemoveFromCollection(prototype.id, collectionId)}
                   />
                 ))}
               </CardFooter>
