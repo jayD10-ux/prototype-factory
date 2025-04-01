@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, RefreshCcw } from "lucide-react";
@@ -6,7 +7,8 @@ import { toast } from "./ui/use-toast";
 import { useToast } from "@/hooks/use-toast";
 import { unzipToFiles } from "@/utils/zip-utils";
 import { Sandpack } from "@codesandbox/sandpack-react";
-import "@codesandbox/sandpack-react/dist/index.css";
+// Update the CSS import to use the correct path
+import "@codesandbox/sandpack-react/style.css";
 import "@/styles/sandpack-fix.css";
 
 interface SandpackPreviewProps {

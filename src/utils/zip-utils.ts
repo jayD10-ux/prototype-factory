@@ -35,3 +35,35 @@ export async function validatePrototypeZip(file: File) {
     throw new Error('Failed to validate ZIP file');
   }
 }
+
+// Add the unzipToFiles function
+export async function unzipToFiles(zipData: Blob): Promise<Record<string, string>> {
+  try {
+    const zip = new JSZip();
+    const content = await zip.loadAsync(zipData);
+    const files: Record<string, string> = {};
+
+    const filePromises = Object.keys(content.files).map(async (path) => {
+      const file = content.files[path];
+      
+      // Skip directories
+      if (file.dir) {
+        return;
+      }
+      
+      try {
+        // Get file content as string
+        const fileContent = await file.async('string');
+        files[path] = fileContent;
+      } catch (error) {
+        console.warn(`Could not extract file ${path}:`, error);
+      }
+    });
+
+    await Promise.all(filePromises);
+    return files;
+  } catch (error) {
+    console.error('Error extracting files from zip:', error);
+    throw new Error('Failed to extract files from the zip archive');
+  }
+}
