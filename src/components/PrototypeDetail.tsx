@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -65,11 +64,12 @@ export const PrototypeDetail = () => {
         }
         
         // Update access timestamp
-        if (shareData[0] && shareData[0].id) {
+        const typedShareData = shareData as PrototypeShare[];
+        if (typedShareData[0] && typedShareData[0].id) {
           await supabase
             .from('prototype_shares' as any)
             .update({ accessed_at: new Date().toISOString() })
-            .eq('id', shareData[0].id);
+            .eq('id', typedShareData[0].id);
         }
       }
 

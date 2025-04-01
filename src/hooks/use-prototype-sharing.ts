@@ -31,7 +31,8 @@ export function usePrototypeSharing(prototypeId: string) {
         throw error;
       }
 
-      return data as PrototypeShare[];
+      // Add explicit type assertion here
+      return (data || []) as PrototypeShare[];
     }
   });
 
@@ -48,12 +49,14 @@ export function usePrototypeSharing(prototypeId: string) {
         .eq('email', shareData.email)
         .eq('is_link_share', false);
 
-      if (existingShares && existingShares.length > 0) {
+      const typedExistingShares = existingShares as { id: string }[] | null;
+
+      if (typedExistingShares && typedExistingShares.length > 0) {
         // Update existing share instead
         const { error } = await supabase
           .from('prototype_shares' as any)
           .update({ permission: shareData.permission })
-          .eq('id', existingShares[0].id);
+          .eq('id', typedExistingShares[0].id);
 
         if (error) throw error;
         
@@ -109,9 +112,11 @@ export function usePrototypeSharing(prototypeId: string) {
         .eq('prototype_id', prototypeId)
         .eq('is_link_share', true);
 
+      const typedExistingShares = existingShares as { id: string }[] | null;
+      
       const { data: userData } = await supabase.auth.getSession();
       
-      if (existingShares && existingShares.length > 0) {
+      if (typedExistingShares && typedExistingShares.length > 0) {
         // Update existing link share
         const { error } = await supabase
           .from('prototype_shares' as any)
@@ -119,7 +124,7 @@ export function usePrototypeSharing(prototypeId: string) {
             permission: options.permission,
             is_public: options.is_public,
           })
-          .eq('id', existingShares[0].id);
+          .eq('id', typedExistingShares[0].id);
 
         if (error) throw error;
       } else {

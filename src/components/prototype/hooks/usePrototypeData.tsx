@@ -43,6 +43,9 @@ export function usePrototypeData(
             return [];
           }
           
+          // Use type assertion to handle the data
+          const typedSharedPrototypeIds = sharedPrototypeIds as { prototype_id: string }[];
+          
           // Get the actual prototypes
           const { data: sharedPrototypes, error: prototypesError } = await supabase
             .from("prototypes")
@@ -52,7 +55,7 @@ export function usePrototypeData(
             `)
             .in(
               "id", 
-              sharedPrototypeIds.map((item: any) => item.prototype_id)
+              typedSharedPrototypeIds.map(item => item.prototype_id)
             );
             
           if (prototypesError) throw prototypesError;
