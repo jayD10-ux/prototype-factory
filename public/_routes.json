@@ -1,19 +1,8 @@
-
 {
   "version": 1,
   "include": ["/*"],
   "exclude": [
     "/build/*",
     "/assets/*"
-  ],
-  "routes": [
-    {
-      "src": "/p/.*",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/prototype/.*",
-      "dest": "/index.html"
-    }
   ]
 }

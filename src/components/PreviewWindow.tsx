@@ -120,12 +120,8 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
 
   // Handle share button click - now opens our share dialog
   const handleShare = useCallback(() => {
-    if (onShare) {
-      onShare();
-    } else {
-      setShowShareDialog(true);
-    }
-  }, [onShare]);
+    setShowShareDialog(true);
+  }, []);
 
   if (isLoading) {
     return (
@@ -153,17 +149,15 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
           url={previewUrl || undefined}
           figmaUrl={figmaUrl}
           filesUrl={filesUrl}
-          onShare={onShare ? handleShare : undefined}
+          onShare={handleShare}
         />
         
-        {!onShare && (
-          <ShareDialog 
-            open={showShareDialog}
-            onOpenChange={setShowShareDialog}
-            prototypeId={prototypeId}
-            prototypeName={prototypeName}
-          />
-        )}
+        <ShareDialog 
+          open={showShareDialog}
+          onOpenChange={setShowShareDialog}
+          prototypeId={prototypeId}
+          prototypeName={prototypeName}
+        />
       </>
     );
   }
@@ -182,14 +176,12 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
         />
       </div>
       
-      {!onShare && (
-        <ShareDialog 
-          open={showShareDialog}
-          onOpenChange={setShowShareDialog}
-          prototypeId={prototypeId}
-          prototypeName={prototypeName}
-        />
-      )}
+      <ShareDialog 
+        open={showShareDialog}
+        onOpenChange={setShowShareDialog}
+        prototypeId={prototypeId}
+        prototypeName={prototypeName}
+      />
     </>
   );
 }

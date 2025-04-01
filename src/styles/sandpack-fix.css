@@ -1,4 +1,3 @@
-
 /* Custom Sandpack styling fixes */
 .sp-wrapper {
   height: 100% !important;
@@ -12,7 +11,6 @@
   height: 100% !important;
   display: flex;
   flex-direction: row;
-  background-color: white;
 }
 
 .sp-stack {
@@ -43,40 +41,6 @@
   height: 100% !important;
   width: 100%;
   border: none;
-}
-
-/* Additional Sandpack styles to compensate for missing CSS */
-.sp-tab-button {
-  padding: 0.5rem 1rem;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--foreground);
-  opacity: 0.8;
-}
-
-.sp-tab-button[data-active='true'] {
-  opacity: 1;
-  font-weight: 600;
-  border-bottom: 2px solid var(--primary);
-}
-
-.sp-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  width: 100%;
-  background-color: var(--background);
-}
-
-.sp-error {
-  padding: 1rem;
-  color: #ef4444;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 14px;
-  white-space: pre-wrap;
 }
 
 /* Fix for split view */
