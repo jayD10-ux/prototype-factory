@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PrototypePreview } from '@/components/prototype-preview';
 import { Skeleton } from '@/components/ui/skeleton';
-import { NotFound } from './NotFound';
+import NotFound from './NotFound';
 
 export default function SharedPrototype() {
   const { id } = useParams<{ id: string }>();
