@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PreviewWindow } from "./PreviewWindow";
+import { ShareDialog } from "./prototype/sharing/ShareDialog";
 import { useToast } from "@/hooks/use-toast";
 import { RefreshCw, AlertTriangle, User } from "lucide-react";
 import { Button } from "./ui/button";
@@ -15,6 +16,7 @@ export const PrototypeDetail = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [processingTimeout, setProcessingTimeout] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const { session } = useSupabase();
   
   const currentUserId = session?.user?.id;
@@ -43,14 +45,31 @@ export const PrototypeDetail = () => {
         throw error;
       }
 
-      // Security check: Make sure the user can only view their own prototypes
+      // Check if prototype is shared with the current user
       if (data && currentUserId && data.created_by !== currentUserId) {
-        toast({
-          variant: "destructive",
-          title: "Access denied",
-          description: "You don't have permission to view this prototype"
-        });
-        throw new Error("Access denied");
+        // Check if user has access via share
+        const { data: shareData, error: shareError } = await supabase
+          .from('prototype_shares')
+          .select('*')
+          .eq('prototype_id', id)
+          .or(`email.eq.${session?.user?.email},is_public.eq.true`);
+        
+        if (shareError || !shareData || shareData.length === 0) {
+          toast({
+            variant: "destructive",
+            title: "Access denied",
+            description: "You don't have permission to view this prototype"
+          });
+          throw new Error("Access denied");
+        }
+        
+        // Update access timestamp
+        if (shareData[0].id) {
+          await supabase
+            .from('prototype_shares')
+            .update({ accessed_at: new Date().toISOString() })
+            .eq('id', shareData[0].id);
+        }
       }
 
       return data;
@@ -67,14 +86,8 @@ export const PrototypeDetail = () => {
 
   // Handle share action
   const handleShare = useCallback(() => {
-    const shareUrl = window.location.href;
-    navigator.clipboard.writeText(shareUrl);
-    
-    toast({
-      title: 'Link Copied!',
-      description: 'Prototype link has been copied to clipboard.',
-    });
-  }, [toast]);
+    setShowShareDialog(true);
+  }, []);
 
   useEffect(() => {
     if (prototype?.deployment_status === 'processing') {
@@ -139,8 +152,21 @@ export const PrototypeDetail = () => {
       </div>
       <div className="flex-1 min-h-0 relative">
         <div className="absolute inset-0">
-          {id && <PreviewWindow prototypeId={id} url={prototype?.deployment_url} onShare={handleShare} />}
+          {id && (
+            <PreviewWindow 
+              prototypeId={id} 
+              url={prototype?.deployment_url} 
+              onShare={handleShare} 
+            />
+          )}
         </div>
+
+        <ShareDialog
+          open={showShareDialog}
+          onOpenChange={setShowShareDialog}
+          prototypeId={id || ''}
+          prototypeName={prototype?.name}
+        />
 
         {prototype?.deployment_status === 'processing' && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/80">

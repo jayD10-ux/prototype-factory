@@ -27,77 +27,108 @@ export function usePrototypeData(
       try {
         if (!userId) return [];
 
-        let query = supabase
-          .from("prototypes")
-          .select(`
-            *,
-            profiles:created_by(name, avatar_url)
-          `);
-
-        // Filter based on if we're looking for user's own prototypes or shared ones
         if (sharedWithMe) {
-          // For "Shared with me" tab, we should only show prototypes that have been
-          // explicitly shared with the user and viewed by them
-          // This implementation assumes there's a table that tracks shared prototypes
-          // Since there isn't an explicit sharing mechanism yet, we'll show no results
-          // until proper sharing functionality is implemented
-          return [];
-        } else {
-          query = query.eq('created_by', userId);
-        }
-
-        // Apply collection filter if a collection is selected
-        if (collectionId) {
-          const { data: prototypeIds } = await supabase
-            .from("prototype_collections")
+          // Get prototypes that have been shared with the user
+          const { data: sharedPrototypeIds, error: sharedError } = await supabase
+            .from("prototype_shares")
             .select("prototype_id")
-            .eq("collection_id", collectionId);
-
-          if (prototypeIds && prototypeIds.length > 0) {
-            query = query.in(
-              "id",
-              prototypeIds.map((item) => item.prototype_id)
-            );
-          } else {
-            // No prototypes in this collection
+            .eq("email", session?.user?.email)
+            .eq("is_link_share", false);
+            
+          if (sharedError) throw sharedError;
+          
+          // If no prototypes have been shared with the user, return empty array
+          if (!sharedPrototypeIds || sharedPrototypeIds.length === 0) {
             return [];
           }
+          
+          // Get the actual prototypes
+          const { data: sharedPrototypes, error: prototypesError } = await supabase
+            .from("prototypes")
+            .select(`
+              *,
+              profiles:created_by(name, avatar_url)
+            `)
+            .in(
+              "id", 
+              sharedPrototypeIds.map(item => item.prototype_id)
+            );
+            
+          if (prototypesError) throw prototypesError;
+          
+          // Transform the data to include creator information
+          return (sharedPrototypes || []).map((prototype: any) => {
+            const profile = prototype.profiles || {};
+            return {
+              ...prototype,
+              creator_name: profile.name || 'Unknown User',
+              creator_avatar: profile.avatar_url,
+              profiles: undefined // Remove the nested profiles object
+            };
+          }) as Prototype[];
+        } else {
+          // Get the user's own prototypes
+          let query = supabase
+            .from("prototypes")
+            .select(`
+              *,
+              profiles:created_by(name, avatar_url)
+            `)
+            .eq('created_by', userId);
+
+          // Apply collection filter if a collection is selected
+          if (collectionId) {
+            const { data: prototypeIds } = await supabase
+              .from("prototype_collections")
+              .select("prototype_id")
+              .eq("collection_id", collectionId);
+
+            if (prototypeIds && prototypeIds.length > 0) {
+              query = query.in(
+                "id",
+                prototypeIds.map((item) => item.prototype_id)
+              );
+            } else {
+              // No prototypes in this collection
+              return [];
+            }
+          }
+
+          // Apply search filter
+          if (searchTerm) {
+            query = query.ilike("name", `%${searchTerm}%`);
+          }
+
+          // Apply sorting
+          switch (sortBy) {
+            case "recent":
+              query = query.order("created_at", { ascending: false });
+              break;
+            case "oldest":
+              query = query.order("created_at", { ascending: true });
+              break;
+            case "name":
+              query = query.order("name", { ascending: true });
+              break;
+            default:
+              query = query.order("created_at", { ascending: false });
+          }
+
+          const { data, error } = await query;
+
+          if (error) throw error;
+
+          // Transform the data to include creator information
+          return (data || []).map((prototype: any) => {
+            const profile = prototype.profiles || {};
+            return {
+              ...prototype,
+              creator_name: profile.name || 'Unknown User',
+              creator_avatar: profile.avatar_url,
+              profiles: undefined // Remove the nested profiles object
+            };
+          }) as Prototype[];
         }
-
-        // Apply search filter
-        if (searchTerm) {
-          query = query.ilike("name", `%${searchTerm}%`);
-        }
-
-        // Apply sorting
-        switch (sortBy) {
-          case "recent":
-            query = query.order("created_at", { ascending: false });
-            break;
-          case "oldest":
-            query = query.order("created_at", { ascending: true });
-            break;
-          case "name":
-            query = query.order("name", { ascending: true });
-            break;
-          default:
-            query = query.order("created_at", { ascending: false });
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        // Transform the data to include creator information
-        return (data || []).map((prototype: any) => {
-          const profile = prototype.profiles || {};
-          return {
-            ...prototype,
-            creator_name: profile.name || 'Unknown User',
-            creator_avatar: profile.avatar_url,
-            profiles: undefined // Remove the nested profiles object
-          };
-        }) as Prototype[];
       } catch (error) {
         console.error("Error fetching prototypes:", error);
         toast({
