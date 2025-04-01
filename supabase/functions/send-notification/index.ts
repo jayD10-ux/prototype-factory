@@ -157,11 +157,7 @@ serve(async (req) => {
       notificationUrl = `/prototype/${payload.prototypeId}`;
     }
     
-    // Determine which channels to use
-    const channels = [];
-    if (preferences.inApp) channels.push("in_app");
-    if (preferences.email) channels.push("email");
-    if (preferences.push) channels.push("push");
+    console.log("Sending notification to", recipientUserId, "with type", type);
     
     // Send the notification via Novu
     const result = await novu.trigger(type, {
@@ -177,6 +173,8 @@ serve(async (req) => {
         url: notificationUrl,
       },
     });
+
+    console.log("Novu notification result:", result);
 
     return new Response(JSON.stringify({ success: true, result }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

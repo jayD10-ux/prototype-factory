@@ -46,7 +46,6 @@ serve(async (req) => {
     
     try {
       // Get subscriber's notifications from Novu
-      // Wrap in try-catch to handle Novu API specific errors
       const result = await novu.subscribers.getNotificationsFeed(userId, {
         page: 0,
         limit: 10,

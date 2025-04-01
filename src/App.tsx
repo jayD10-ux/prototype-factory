@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +14,7 @@ import type { User, Session } from '@supabase/supabase-js';
 import LoginPage from './components/login-page';
 import { EnvironmentBadge } from "./components/environment-badge";
 import Onboarding from "./pages/Onboarding";
+import { NovuNotificationProvider } from "./components/notification/novu-provider";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,7 +27,7 @@ const queryClient = new QueryClient({
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  skipOnboardingCheck?: boolean; // New prop to allow skipping the onboarding check
+  skipOnboardingCheck?: boolean;
 }
 
 const NavigationWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -46,7 +46,6 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
         const { data } = await supabase.auth.getSession();
         setSession(data.session);
         
-        // Check if profile is complete, but only if we're not skipping onboarding check
         if (data.session?.user && !skipOnboardingCheck) {
           const { data: profileData } = await supabase
             .from('profiles')
@@ -54,7 +53,6 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
             .eq('id', data.session.user.id)
             .single();
             
-          // If name is missing, user needs onboarding
           setNeedsOnboarding(!profileData?.name);
         }
       } catch (error) {
@@ -71,11 +69,9 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       
-      // Reset loading state when auth state changes
       if (!session) {
         setLoading(false);
       } else if (!skipOnboardingCheck) {
-        // Check if profile is complete when session changes, but only if not skipping check
         const checkProfile = async () => {
           try {
             const { data: profileData } = await supabase
@@ -116,7 +112,6 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
     return <Navigate to="/auth" replace />;
   }
 
-  // Only redirect to onboarding if needed AND we're not skipping the check
   if (needsOnboarding && !skipOnboardingCheck) {
     return <Navigate to="/onboarding" replace />;
   }
@@ -152,7 +147,9 @@ const AppContent = () => {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <Index />
+                <NovuNotificationProvider>
+                  <Index />
+                </NovuNotificationProvider>
               </ProtectedRoute>
             }
           />
@@ -160,7 +157,9 @@ const AppContent = () => {
             path="/prototype/:id"
             element={
               <ProtectedRoute>
-                <PrototypeDetail />
+                <NovuNotificationProvider>
+                  <PrototypeDetail />
+                </NovuNotificationProvider>
               </ProtectedRoute>
             }
           />
