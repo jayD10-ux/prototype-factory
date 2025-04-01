@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "@novu/node": "https://esm.sh/@novu/node@0.19.0"
+  }
+}

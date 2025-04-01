@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useSupabase } from "@/lib/supabase-provider";
 import { useToast } from "@/hooks/use-toast";
@@ -83,7 +82,7 @@ export function useNotifications() {
         setUnreadCount(data.notifications.filter((n: Notification) => !n.seen).length);
       }
     } catch (error) {
-      console.error("Error fetching notifications:", error);
+      console.error(`Error fetching notifications for user ${userId}:`, error);
       toast({
         title: "Error fetching notifications",
         description: "Please try again later",

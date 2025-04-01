@@ -1,0 +1,8 @@
+{
+  "tasks": {
+    "serve": "deno run --allow-net --allow-env index.ts"
+  },
+  "imports": {
+    "@novu/node": "npm:@novu/node@0.19.0"
+  }
+}
