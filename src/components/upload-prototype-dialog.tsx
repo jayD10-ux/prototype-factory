@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,26 +10,29 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { validatePrototypeZip } from '../utils/zip-utils';
-
-export function UploadPrototypeDialog({ onUpload }: { onUpload?: () => void }) {
+export function UploadPrototypeDialog({
+  onUpload
+}: {
+  onUpload?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [figmaUrl, setFigmaUrl] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-
   const onDrop = async (acceptedFiles: File[]) => {
     try {
       const file = acceptedFiles[0];
       if (!file) return;
-
       if (!name.trim()) {
         toast({
           title: "Error",
           description: "Please enter a name for the prototype",
-          variant: "destructive",
+          variant: "destructive"
         });
         return;
       }
@@ -41,7 +43,7 @@ export function UploadPrototypeDialog({ onUpload }: { onUpload?: () => void }) {
         toast({
           title: "Error",
           description: "File size exceeds the 1GB limit",
-          variant: "destructive",
+          variant: "destructive"
         });
         return;
       }
@@ -54,51 +56,49 @@ export function UploadPrototypeDialog({ onUpload }: { onUpload?: () => void }) {
         toast({
           title: "Error",
           description: "Please upload an HTML, React/JS file, or a ZIP archive",
-          variant: "destructive",
+          variant: "destructive"
         });
         return;
       }
 
       // Get current session
-      const { data } = await supabase.auth.getSession();
-      
+      const {
+        data
+      } = await supabase.auth.getSession();
       if (!data.session?.user) {
         toast({
           title: "Error",
           description: "Please sign in to upload prototypes",
-          variant: "destructive",
+          variant: "destructive"
         });
         navigate('/auth');
         return;
       }
 
       // Create prototype entry with all required fields
-      const { data: prototype, error: prototypeError } = await supabase
-        .from('prototypes')
-        .insert({
-          name: name.trim(),
-          created_by: data.session.user.id,
-          url: null,
-          deployment_status: 'pending',
-          figma_url: figmaUrl.trim() || null
-        })
-        .select()
-        .single();
-
+      const {
+        data: prototype,
+        error: prototypeError
+      } = await supabase.from('prototypes').insert({
+        name: name.trim(),
+        created_by: data.session.user.id,
+        url: null,
+        deployment_status: 'pending',
+        figma_url: figmaUrl.trim() || null
+      }).select().single();
       if (prototypeError) throw prototypeError;
 
       // Upload file with progress tracking
       const filePath = `${prototype.id}/${file.name}`;
-      
+
       // Start tracking upload progress
       const fileReader = new FileReader();
-      
+
       // Set up progress tracking
       let uploadProgressInterval: number | undefined;
-      
       fileReader.onload = async () => {
         const fileData = new Uint8Array(fileReader.result as ArrayBuffer);
-        
+
         // Simulate upload progress (actual progress tracking not supported by Supabase JS client)
         let progress = 0;
         uploadProgressInterval = window.setInterval(() => {
@@ -107,57 +107,53 @@ export function UploadPrototypeDialog({ onUpload }: { onUpload?: () => void }) {
             setUploadProgress(progress);
           }
         }, 300) as unknown as number;
-        
         try {
           console.log(`Uploading file: ${file.name} (${Math.round(file.size / 1024 / 1024)}MB)`);
-          
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('prototype-uploads')
-            .upload(filePath, fileData, {
-              contentType: file.type || 'application/octet-stream'
-            });
-
+          const {
+            data: uploadData,
+            error: uploadError
+          } = await supabase.storage.from('prototype-uploads').upload(filePath, fileData, {
+            contentType: file.type || 'application/octet-stream'
+          });
           if (uploadError) throw uploadError;
-          
+
           // Complete progress
           setUploadProgress(100);
-          
-          // Process prototype
-          const { data: processData, error: processError } = await supabase.functions
-            .invoke('process-prototype', {
-              body: { 
-                prototypeId: prototype.id,
-                fileName: file.name
-              }
-            });
 
+          // Process prototype
+          const {
+            data: processData,
+            error: processError
+          } = await supabase.functions.invoke('process-prototype', {
+            body: {
+              prototypeId: prototype.id,
+              fileName: file.name
+            }
+          });
           if (processError) {
             console.error('Process error details:', processError);
             throw new Error(processError.message || 'Failed to process prototype');
           }
 
           // Update status to reflect processing started
-          const { error: updateError } = await supabase
-            .from('prototypes')
-            .update({ 
-              file_path: filePath,
-              deployment_status: 'processing'
-            })
-            .eq('id', prototype.id);
-
+          const {
+            error: updateError
+          } = await supabase.from('prototypes').update({
+            file_path: filePath,
+            deployment_status: 'processing'
+          }).eq('id', prototype.id);
           if (updateError) throw updateError;
 
           // Use correct invalidate query format
           queryClient.invalidateQueries({
             queryKey: ['prototypes']
           });
-
           toast({
             title: "Success",
-            description: "Prototype uploaded successfully",
+            description: "Prototype uploaded successfully"
           });
           setOpen(false);
-          
+
           // Redirect to the prototype preview
           navigate(`/prototype/${prototype.id}`);
         } catch (error) {
@@ -166,26 +162,24 @@ export function UploadPrototypeDialog({ onUpload }: { onUpload?: () => void }) {
           clearInterval(uploadProgressInterval);
         }
       };
-      
       fileReader.readAsArrayBuffer(file);
     } catch (error: any) {
       console.error('Error uploading prototype:', error);
       const errorMessage = error.message || "Failed to upload prototype";
-      const description = error.response?.text 
-        ? await error.response.text()
-        : errorMessage;
-        
+      const description = error.response?.text ? await error.response.text() : errorMessage;
       toast({
         title: "Error",
         description: description,
-        variant: "destructive",
+        variant: "destructive"
       });
-      
       setUploadProgress(0);
     }
   };
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const {
+    getRootProps,
+    getInputProps,
+    isDragActive
+  } = useDropzone({
     onDrop,
     maxFiles: 1,
     accept: {
@@ -196,18 +190,10 @@ export function UploadPrototypeDialog({ onUpload }: { onUpload?: () => void }) {
       'application/javascript': ['.js'],
       'application/typescript': ['.ts']
     },
-    maxSize: 1024 * 1024 * 1024, // 1GB size limit
+    maxSize: 1024 * 1024 * 1024 // 1GB size limit
   });
-
-  return (
-    <>
-      <Button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-2"
-      >
-        <Plus size={16} />
-        <span>Add Prototype</span>
-      </Button>
+  return <>
+      
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -222,26 +208,14 @@ export function UploadPrototypeDialog({ onUpload }: { onUpload?: () => void }) {
               <Label htmlFor="name" className="text-right">
                 Name
               </Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="col-span-3"
-                placeholder="Enter prototype name"
-              />
+              <Input id="name" value={name} onChange={e => setName(e.target.value)} className="col-span-3" placeholder="Enter prototype name" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="figmaUrl" className="text-right">
                 Figma URL
               </Label>
               <div className="col-span-3 space-y-1">
-                <Input
-                  id="figmaUrl"
-                  value={figmaUrl}
-                  onChange={(e) => setFigmaUrl(e.target.value)}
-                  className="w-full"
-                  placeholder="https://www.figma.com/file/..."
-                />
+                <Input id="figmaUrl" value={figmaUrl} onChange={e => setFigmaUrl(e.target.value)} className="w-full" placeholder="https://www.figma.com/file/..." />
                 <p className="text-xs text-muted-foreground">
                   Link your Figma design to view it alongside your prototype
                 </p>
@@ -272,36 +246,29 @@ export function UploadPrototypeDialog({ onUpload }: { onUpload?: () => void }) {
                     <strong>Archive:</strong> .zip (max 1GB)
                   </p>
                 </div>
-                {uploadProgress > 0 && (
-                  <div className="w-full max-w-xs mx-auto">
+                {uploadProgress > 0 && <div className="w-full max-w-xs mx-auto">
                     <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                      <div 
-                        className="h-full bg-primary transition-all duration-300" 
-                        style={{ width: `${uploadProgress}%` }}
-                      />
+                      <div className="h-full bg-primary transition-all duration-300" style={{
+                    width: `${uploadProgress}%`
+                  }} />
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       {uploadProgress === 100 ? 'Processing...' : `Uploading: ${uploadProgress}%`}
                     </p>
-                  </div>
-                )}
+                  </div>}
               </div>
             </div>
             <input {...getInputProps()} />
           </div>
           <DialogFooter>
-            <Button
-              type="submit"
-              onClick={() => {
-                const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-                if (input) input.click();
-              }}
-            >
+            <Button type="submit" onClick={() => {
+            const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+            if (input) input.click();
+          }}>
               Select Files
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
-  );
+    </>;
 }
