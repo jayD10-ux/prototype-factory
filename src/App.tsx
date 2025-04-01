@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { PrototypeDetail } from "@/components/PrototypeDetail";
+import { SharedPrototype } from "@/components/SharedPrototype"; 
 import { SupabaseProvider } from "@/lib/supabase-provider";
 import type { User, Session } from '@supabase/supabase-js';
 import LoginPage from './components/login-page';
@@ -164,6 +165,8 @@ const AppContent = () => {
               </ProtectedRoute>
             }
           />
+          {/* Add new route for shared prototypes that doesn't require authentication */}
+          <Route path="/p/:id" element={<SharedPrototype />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />
