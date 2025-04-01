@@ -350,6 +350,50 @@ export type Database = {
           },
         ]
       }
+      prototype_shares: {
+        Row: {
+          accessed_at: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_link_share: boolean
+          is_public: boolean
+          permission: string
+          prototype_id: string
+          shared_by: string
+        }
+        Insert: {
+          accessed_at?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_link_share?: boolean
+          is_public?: boolean
+          permission?: string
+          prototype_id: string
+          shared_by: string
+        }
+        Update: {
+          accessed_at?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_link_share?: boolean
+          is_public?: boolean
+          permission?: string
+          prototype_id?: string
+          shared_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prototype_shares_prototype_id_fkey"
+            columns: ["prototype_id"]
+            isOneToOne: false
+            referencedRelation: "prototypes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prototype_tags: {
         Row: {
           prototype_id: string

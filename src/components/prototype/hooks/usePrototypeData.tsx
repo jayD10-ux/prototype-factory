@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Prototype } from "@/types/prototype";
 import { useSupabase } from "@/lib/supabase-provider";
+import { PrototypeShare } from "@/types/prototype-sharing";
 
 export function usePrototypeData(
   sortBy: string,
@@ -30,7 +31,7 @@ export function usePrototypeData(
         if (sharedWithMe) {
           // Get prototypes that have been shared with the user
           const { data: sharedPrototypeIds, error: sharedError } = await supabase
-            .from("prototype_shares")
+            .from('prototype_shares' as any)
             .select("prototype_id")
             .eq("email", session?.user?.email)
             .eq("is_link_share", false);
@@ -51,7 +52,7 @@ export function usePrototypeData(
             `)
             .in(
               "id", 
-              sharedPrototypeIds.map(item => item.prototype_id)
+              sharedPrototypeIds.map((item: any) => item.prototype_id)
             );
             
           if (prototypesError) throw prototypesError;

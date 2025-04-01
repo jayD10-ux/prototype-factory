@@ -10,6 +10,7 @@ import { RefreshCw, AlertTriangle, User } from "lucide-react";
 import { Button } from "./ui/button";
 import { useSupabase } from "@/lib/supabase-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { PrototypeShare } from "@/types/prototype-sharing";
 
 export const PrototypeDetail = () => {
   const { id } = useParams();
@@ -49,7 +50,7 @@ export const PrototypeDetail = () => {
       if (data && currentUserId && data.created_by !== currentUserId) {
         // Check if user has access via share
         const { data: shareData, error: shareError } = await supabase
-          .from('prototype_shares')
+          .from('prototype_shares' as any)
           .select('*')
           .eq('prototype_id', id)
           .or(`email.eq.${session?.user?.email},is_public.eq.true`);
@@ -64,9 +65,9 @@ export const PrototypeDetail = () => {
         }
         
         // Update access timestamp
-        if (shareData[0].id) {
+        if (shareData[0] && shareData[0].id) {
           await supabase
-            .from('prototype_shares')
+            .from('prototype_shares' as any)
             .update({ accessed_at: new Date().toISOString() })
             .eq('id', shareData[0].id);
         }
@@ -217,4 +218,4 @@ export const PrototypeDetail = () => {
       </div>
     </div>
   );
-};
+}
