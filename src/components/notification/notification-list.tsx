@@ -16,7 +16,7 @@ interface NotificationListProps {
 }
 
 export function NotificationList({ onClose }: NotificationListProps) {
-  const { notifications, isLoading, markAsRead, error } = useNotifications();
+  const { notifications, isLoading, markAsRead, error, fetchNotifications } = useNotifications();
   const [activeTab, setActiveTab] = useState("notifications");
   const { toast } = useToast();
 
@@ -65,7 +65,7 @@ export function NotificationList({ onClose }: NotificationListProps) {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => window.location.reload()}
+                onClick={() => fetchNotifications()}
               >
                 Try again
               </Button>

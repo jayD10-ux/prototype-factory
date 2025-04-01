@@ -46,6 +46,7 @@ serve(async (req) => {
     
     try {
       // Get subscriber's notifications from Novu
+      // Wrap in try-catch to handle Novu API specific errors
       const result = await novu.subscribers.getNotificationsFeed(userId, {
         page: 0,
         limit: 10,
@@ -66,7 +67,18 @@ serve(async (req) => {
     } catch (err) {
       const novuError = err as NovuError;
       console.error("Novu API Error:", novuError);
-      throw new Error(`Novu API Error: ${novuError.message || 'Unknown error'}`);
+      
+      // Return a structured error response with status code
+      return new Response(JSON.stringify({ 
+        error: "Failed to fetch notifications from Novu",
+        details: {
+          message: novuError.message || "Unknown error",
+          status: novuError.status || 500
+        }
+      }), {
+        status: novuError.status || 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
   } catch (err) {
     const error = err as Error;

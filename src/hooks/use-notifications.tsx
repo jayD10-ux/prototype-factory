@@ -40,6 +40,8 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
 
   // Fetch notification preferences
   const { data: preferences, refetch: refetchPreferences } = useQuery({
@@ -79,7 +81,13 @@ export function useNotifications() {
       });
       
       if (error) {
-        throw error;
+        console.error("Edge function error:", error);
+        throw new Error(error.message || "Failed to fetch notifications");
+      }
+      
+      if (data?.error) {
+        console.error("API error:", data.error, data.details);
+        throw new Error(data.error);
       }
       
       if (data?.notifications) {
@@ -89,11 +97,29 @@ export function useNotifications() {
     } catch (error) {
       console.error(`Error fetching notifications for user ${userId}:`, error);
       setError("Failed to load notifications");
-      toast({
-        title: "Error fetching notifications",
-        description: "Please try again later",
-        variant: "destructive"
-      });
+      
+      // Only show toast on first failure
+      if (retryCount === 0) {
+        toast({
+          title: "Error fetching notifications",
+          description: "Please try again later",
+          variant: "destructive"
+        });
+      }
+      
+      // Auto retry up to MAX_RETRIES times
+      if (retryCount < MAX_RETRIES) {
+        const nextRetry = retryCount + 1;
+        setRetryCount(nextRetry);
+        
+        // Exponential backoff: 2s, 4s, 8s
+        const delay = Math.pow(2, nextRetry) * 1000;
+        console.log(`Retrying in ${delay}ms (attempt ${nextRetry}/${MAX_RETRIES})`);
+        
+        setTimeout(() => {
+          fetchNotifications();
+        }, delay);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -202,11 +228,16 @@ export function useNotifications() {
       fetchNotifications();
       
       // Set up a refresh interval
-      const intervalId = setInterval(fetchNotifications, 30000); // Refresh every 30 seconds
+      const intervalId = setInterval(fetchNotifications, 60000); // Refresh every minute
       
       return () => clearInterval(intervalId);
     }
   }, [userId]);
+
+  const retryFetch = () => {
+    setRetryCount(0);
+    fetchNotifications();
+  };
 
   return {
     notifications,
@@ -215,7 +246,7 @@ export function useNotifications() {
     error,
     markAsRead,
     markAllAsRead,
-    fetchNotifications,
+    fetchNotifications: retryFetch,
     preferences,
     updatePreferences,
     sendTestNotification
