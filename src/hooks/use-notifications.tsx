@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useSupabase } from "@/lib/supabase-provider";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +39,7 @@ export function useNotifications() {
   const [isLoading, setIsLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch notification preferences
   const { data: preferences, refetch: refetchPreferences } = useQuery({
@@ -70,12 +72,15 @@ export function useNotifications() {
     
     try {
       setIsLoading(true);
+      setError(null);
       
       const { data, error } = await supabase.functions.invoke("get-notifications", {
         body: { userId }
       });
       
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       
       if (data?.notifications) {
         setNotifications(data.notifications);
@@ -83,6 +88,7 @@ export function useNotifications() {
       }
     } catch (error) {
       console.error(`Error fetching notifications for user ${userId}:`, error);
+      setError("Failed to load notifications");
       toast({
         title: "Error fetching notifications",
         description: "Please try again later",
@@ -206,6 +212,7 @@ export function useNotifications() {
     notifications,
     unreadCount,
     isLoading,
+    error,
     markAsRead,
     markAllAsRead,
     fetchNotifications,

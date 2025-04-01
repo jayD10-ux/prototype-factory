@@ -16,7 +16,7 @@ interface NotificationListProps {
 }
 
 export function NotificationList({ onClose }: NotificationListProps) {
-  const { notifications, isLoading, markAsRead } = useNotifications();
+  const { notifications, isLoading, markAsRead, error } = useNotifications();
   const [activeTab, setActiveTab] = useState("notifications");
   const { toast } = useToast();
 
@@ -57,6 +57,18 @@ export function NotificationList({ onClose }: NotificationListProps) {
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="h-5 w-5 border-t-2 border-b-2 border-primary rounded-full animate-spin"></div>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+              <AlertCircle className="h-8 w-8 text-destructive mb-2" />
+              <p className="text-sm text-muted-foreground mb-2">Error loading notifications</p>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => window.location.reload()}
+              >
+                Try again
+              </Button>
             </div>
           ) : !notifications || notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full">
