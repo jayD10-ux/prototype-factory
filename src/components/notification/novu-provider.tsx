@@ -31,12 +31,6 @@ export function NovuNotificationProvider({ children }: NovuNotificationProviderP
         console.log("Novu loaded successfully");
       }}
       subscriberHash={undefined} // Add a hash if your backend provides one for security
-      theme={{
-        light: {
-          primary: "#DDD450",
-          secondary: "#0E121B"
-        }
-      }}
     >
       {children}
     </NovuProvider>
