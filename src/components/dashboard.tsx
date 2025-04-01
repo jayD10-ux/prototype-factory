@@ -6,6 +6,7 @@ import { PrototypeGrid } from "./prototype-grid";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { NotificationBell } from "./notification/notification-bell";
+import { ProfileDropdown } from "./profile/profile-dropdown";
 import { Plus } from "lucide-react";
 
 const Dashboard = () => {
@@ -24,6 +25,7 @@ const Dashboard = () => {
         </div>
         <div className="flex gap-4 items-center">
           <NotificationBell />
+          <ProfileDropdown />
           <UploadPrototypeDialog
             onUpload={() => {
               queryClient.invalidateQueries({ queryKey: ["prototypes"] });

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +10,10 @@ import { usePrototypeData } from "./prototype/hooks/usePrototypeData";
 import { usePrototypeSelection } from "./prototype/hooks/usePrototypeSelection";
 import { Collection, CollectionWithCount } from "@/types/prototype";
 import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProfileAvatar } from "./profile/profile-avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSupabase } from "@/lib/supabase-provider";
 
 export const PrototypeGrid = () => {
   // State for view, sort, search and selection
@@ -20,7 +23,9 @@ export const PrototypeGrid = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
   const [isAddToCollectionDialogOpen, setIsAddToCollectionDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"my" | "shared">("my");
   
+  const { session } = useSupabase();
   const { toast } = useToast();
 
   // Query for collections with counts
@@ -69,7 +74,8 @@ export const PrototypeGrid = () => {
   const { prototypes, prototypeCollections, isLoading } = usePrototypeData(
     sortBy, 
     searchTerm, 
-    selectedCollection
+    selectedCollection,
+    activeTab === "shared"
   );
   
   const { 
@@ -92,35 +98,93 @@ export const PrototypeGrid = () => {
 
   return (
     <div className="container mx-auto py-8">
-      <PrototypeCollections 
-        selectedCollection={selectedCollection}
-        onSelectCollection={setSelectedCollection}
-        hideHeadline={true}
-      />
+      <Tabs 
+        defaultValue="my" 
+        value={activeTab} 
+        onValueChange={(value) => setActiveTab(value as "my" | "shared")}
+        className="mb-6"
+      >
+        <TabsList>
+          <TabsTrigger value="my">My Prototypes</TabsTrigger>
+          <TabsTrigger value="shared">Shared With Me</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="my">
+          <PrototypeCollections 
+            selectedCollection={selectedCollection}
+            onSelectCollection={setSelectedCollection}
+            hideHeadline={true}
+          />
 
-      <PrototypeToolbar 
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        sortBy={sortBy}
-        onSortChange={setSortBy}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        onAddPrototype={() => setIsAddDialogOpen(true)}
-        selectionMode={selectedPrototypes.length > 0}
-        selectedCount={selectedPrototypes.length}
-        onSelectAll={handleSelectAll}
-        onAddToCollection={() => setIsAddToCollectionDialogOpen(true)}
-        onDeleteSelected={handleDeleteSelected}
-      />
+          <PrototypeToolbar 
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            onAddPrototype={() => setIsAddDialogOpen(true)}
+            selectionMode={selectedPrototypes.length > 0}
+            selectedCount={selectedPrototypes.length}
+            onSelectAll={handleSelectAll}
+            onAddToCollection={() => setIsAddToCollectionDialogOpen(true)}
+            onDeleteSelected={handleDeleteSelected}
+          />
 
-      <PrototypeCardList 
-        prototypes={prototypes}
-        viewMode={viewMode}
-        prototypeCollections={prototypeCollections}
-        selectedPrototypes={selectedPrototypes}
-        togglePrototypeSelection={togglePrototypeSelection}
-        collectionId={selectedCollection || undefined}
-      />
+          <PrototypeCardList 
+            prototypes={prototypes}
+            viewMode={viewMode}
+            prototypeCollections={prototypeCollections}
+            selectedPrototypes={selectedPrototypes}
+            togglePrototypeSelection={togglePrototypeSelection}
+            collectionId={selectedCollection || undefined}
+          />
+        </TabsContent>
+        
+        <TabsContent value="shared">
+          {prototypes.length > 0 ? (
+            <>
+              <PrototypeToolbar 
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                onAddPrototype={() => setIsAddDialogOpen(true)}
+                selectionMode={false}
+                selectedCount={0}
+                onSelectAll={() => {}}
+                onAddToCollection={() => {}}
+                onDeleteSelected={() => {}}
+                hideSelectionControls={true}
+                hideAddButton={true}
+              />
+              
+              <PrototypeCardList 
+                prototypes={prototypes}
+                viewMode={viewMode}
+                prototypeCollections={prototypeCollections}
+                selectedPrototypes={[]}
+                togglePrototypeSelection={() => {}}
+                showCreator={true}
+                disableSelection={true}
+              />
+            </>
+          ) : (
+            <Card className="border-dashed">
+              <CardHeader>
+                <CardTitle className="text-center">No Shared Prototypes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-center text-muted-foreground">
+                  Prototypes shared with you will appear here.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       <AddToCollectionDialog 
         open={isAddToCollectionDialogOpen}

@@ -1,15 +1,16 @@
 
-import { useState } from "react";
-import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
 } from "@/components/ui/select";
-import { Grid2X2, List, Plus, Search } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { LayoutGrid, List, Plus, Share, Trash } from "lucide-react";
 
 interface PrototypeToolbarProps {
   searchTerm: string;
@@ -17,16 +18,18 @@ interface PrototypeToolbarProps {
   sortBy: string;
   onSortChange: (value: string) => void;
   viewMode: "grid" | "list";
-  onViewModeChange: (mode: "grid" | "list") => void;
+  onViewModeChange: (value: "grid" | "list") => void;
   onAddPrototype: () => void;
   selectionMode: boolean;
   selectedCount: number;
   onSelectAll: () => void;
   onAddToCollection: () => void;
   onDeleteSelected: () => void;
+  hideSelectionControls?: boolean;
+  hideAddButton?: boolean;
 }
 
-export function PrototypeToolbar({
+export function PrototypeToolbar({ 
   searchTerm,
   onSearchChange,
   sortBy,
@@ -39,104 +42,76 @@ export function PrototypeToolbar({
   onSelectAll,
   onAddToCollection,
   onDeleteSelected,
+  hideSelectionControls = false,
+  hideAddButton = false
 }: PrototypeToolbarProps) {
   return (
-    <div className="flex items-center justify-between mb-8 flex-wrap gap-3">
-      <div className="flex items-center gap-4 flex-1 flex-wrap">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+    <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-1 items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
+            type="search"
             placeholder="Search prototypes..."
+            className="pl-8"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10"
           />
         </div>
-        
-        <Select value={sortBy} onValueChange={onSortChange}>
-          <SelectTrigger className="w-32">
-            <SelectValue />
+        <Select
+          value={sortBy}
+          onValueChange={onSortChange}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="recent">Recent</SelectItem>
+            <SelectItem value="recent">Most Recent</SelectItem>
+            <SelectItem value="oldest">Oldest First</SelectItem>
             <SelectItem value="name">Name</SelectItem>
           </SelectContent>
         </Select>
-        
-        <div className="flex items-center gap-1 border rounded-md">
-          <Button
-            variant={viewMode === "grid" ? "secondary" : "ghost"}
-            size="icon"
-            onClick={() => onViewModeChange("grid")}
-          >
-            <Grid2X2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === "list" ? "secondary" : "ghost"}
-            size="icon"
-            onClick={() => onViewModeChange("list")}
-          >
+        <ToggleGroup
+          type="single"
+          value={viewMode}
+          onValueChange={(value) => {
+            if (value) onViewModeChange(value as "grid" | "list");
+          }}
+          className="hidden md:flex"
+        >
+          <ToggleGroupItem value="grid" aria-label="Grid view">
+            <LayoutGrid className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="list" aria-label="List view">
             <List className="h-4 w-4" />
-          </Button>
-        </div>
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {selectionMode && !hideSelectionControls && (
+          <>
+            <Button variant="outline" onClick={onSelectAll}>
+              Select All
+            </Button>
+            <Button variant="outline" onClick={onAddToCollection}>
+              <Share className="mr-2 h-4 w-4" />
+              Add to Collection
+            </Button>
+            <Button variant="destructive" onClick={onDeleteSelected}>
+              <Trash className="mr-2 h-4 w-4" />
+              Delete {selectedCount > 0 ? `(${selectedCount})` : ""}
+            </Button>
+          </>
+        )}
         
-        {selectionMode && (
-          <SelectionControls 
-            selectedCount={selectedCount} 
-            onSelectAll={onSelectAll} 
-            onAddToCollection={onAddToCollection}
-            onDeleteSelected={onDeleteSelected}
-          />
+        {!hideAddButton && (
+          <Button onClick={onAddPrototype}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Prototype
+          </Button>
         )}
       </div>
-      
-      <Button onClick={onAddPrototype}>
-        <Plus className="h-4 w-4 mr-2" />
-        Add Prototype
-      </Button>
     </div>
   );
 }
-
-function SelectionControls({ 
-  selectedCount, 
-  onSelectAll, 
-  onAddToCollection, 
-  onDeleteSelected 
-}: { 
-  selectedCount: number;
-  onSelectAll: () => void;
-  onAddToCollection: () => void;
-  onDeleteSelected: () => void;
-}) {
-  return (
-    <>
-      <Button
-        variant="secondary"
-        onClick={onSelectAll}
-        className="ml-2"
-      >
-        {selectedCount > 0 ? 'Deselect All' : 'Select All'}
-      </Button>
-      <Button
-        variant="outline"
-        onClick={onAddToCollection}
-        className="ml-2"
-      >
-        <FolderPlus className="h-4 w-4 mr-2" />
-        Add to Collection
-      </Button>
-      <Button
-        variant="destructive"
-        onClick={onDeleteSelected}
-        className="ml-2"
-      >
-        <Trash2 className="h-4 w-4 mr-2" />
-        Delete Selected ({selectedCount})
-      </Button>
-    </>
-  );
-}
-
-// Import these here to avoid circular dependencies
-import { FolderPlus, Trash2 } from "lucide-react";
