@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -188,6 +187,34 @@ export function PreviewControls({
   useEffect(() => {
     setBackAttempts(0);
   }, [location.pathname]);
+
+  // Update the share functionality to copy the correct URL format
+  const handleShareClick = () => {
+    if (onShare) {
+      onShare();
+    } else {
+      // Extract prototype ID from the current path if available
+      const pathParts = location.pathname.split('/');
+      const isInPrototypeDetail = pathParts[1] === 'prototype';
+      
+      if (isInPrototypeDetail && pathParts[2]) {
+        const prototypeId = pathParts[2];
+        const shareUrl = `${window.location.origin}/p/${prototypeId}`;
+        
+        navigator.clipboard.writeText(shareUrl);
+        toast({
+          title: 'Link Copied!',
+          description: 'Prototype link has been copied to clipboard.',
+        });
+      } else {
+        toast({
+          title: 'Share Error',
+          description: 'Could not generate sharing link for this page.',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
 
   return (
     <div className="flex items-center gap-2 p-1 rounded-lg backdrop-blur-sm bg-background/80 shadow-md">
@@ -478,7 +505,7 @@ export function PreviewControls({
           variant="ghost"
           size="icon"
           className="h-7 w-7"
-          onClick={onShare}
+          onClick={handleShareClick}
           title="Share Prototype"
         >
           <Share2 className="h-3.5 w-3.5" />

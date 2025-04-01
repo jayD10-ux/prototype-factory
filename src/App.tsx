@@ -15,6 +15,7 @@ import LoginPage from './components/login-page';
 import { EnvironmentBadge } from "./components/environment-badge";
 import Onboarding from "./pages/Onboarding";
 import { NovuNotificationProvider } from "./components/notification/novu-provider";
+import SharedPrototype from './pages/SharedPrototype';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -163,6 +164,7 @@ const AppContent = () => {
               </ProtectedRoute>
             }
           />
+          <Route path="/p/:id" element={<SharedPrototype />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />
@@ -173,7 +175,7 @@ const AppContent = () => {
   );
 };
 
-const App = () => {
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -181,6 +183,6 @@ const App = () => {
       </TooltipProvider>
     </QueryClientProvider>
   );
-};
+}
 
 export default App;
