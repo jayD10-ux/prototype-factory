@@ -1,5 +1,5 @@
 
-import { NotificationBellIcon, PopoverNotificationCenter } from "@novu/react";
+import { NotificationBell, PopoverNotificationCenter } from "@novu/notification-center";
 import { useNavigate } from "react-router-dom";
 
 export function NovuNotificationBell() {
@@ -17,7 +17,7 @@ export function NovuNotificationBell() {
       }}
     >
       {({ unseenCount }) => (
-        <NotificationBellIcon unseenCount={unseenCount} />
+        <NotificationBell unseenCount={unseenCount} />
       )}
     </PopoverNotificationCenter>
   );

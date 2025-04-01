@@ -1,5 +1,5 @@
 
-import { NovuProvider } from "@novu/react";
+import { NovuProvider } from "@novu/notification-center";
 import { useSupabase } from "@/lib/supabase-provider";
 import { useNavigate } from "react-router-dom";
 import React from "react";
@@ -24,17 +24,17 @@ export function NovuNotificationProvider({ children }: NovuNotificationProviderP
     <NovuProvider
       applicationIdentifier={applicationIdentifier}
       subscriberId={session.user.id}
-      initialFetchingStrategy={{
-        fetchNotifications: true,
-        fetchUnseenCount: true,
-      }}
+      backendUrl="https://api.novu.co"
+      socketUrl="https://ws.novu.co"
       i18n="en"
-      routerPush={(path) => navigate(path)}
-      // Optional appearance customization
-      appearance={{
+      onLoad={() => {
+        console.log("Novu loaded successfully");
+      }}
+      subscriberHash={undefined} // Add a hash if your backend provides one for security
+      styles={{
         variables: {
-          colorPrimary: "#DDD450",
-          colorForeground: "#0E121B"
+          main: "#DDD450",
+          light: "#0E121B"
         }
       }}
     >
