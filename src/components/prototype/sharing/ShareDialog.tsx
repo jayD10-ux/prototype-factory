@@ -54,9 +54,18 @@ export function ShareDialog({ open, onOpenChange, prototypeId, prototypeName = '
 
   const emailShares = getEmailShares();
   const linkShare = getLinkShare();
-  const shareLink = linkShare ? `${window.location.origin}/p/${prototypeId}` : '';
+  // Always generate a shareable link regardless of whether a link share exists
+  const shareLink = `${window.location.origin}/p/${prototypeId}`;
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
+    // If no link share exists yet, create one with default settings
+    if (!linkShare) {
+      await updateLinkShare({
+        is_public: isPublic,
+        permission
+      });
+    }
+    
     navigator.clipboard.writeText(shareLink);
     toast({
       title: "Link copied",

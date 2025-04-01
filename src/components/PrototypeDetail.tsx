@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -130,25 +131,31 @@ export const PrototypeDetail = () => {
     );
   }
 
+  // Check if current user is the creator of the prototype
+  const isCreator = currentUserId === prototype.created_by;
   const creatorName = prototype.profiles?.name || 'Anonymous';
   const creatorAvatar = prototype.profiles?.avatar_url;
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden">
-      <div className="bg-background p-2 flex items-center border-b">
-        <div className="flex items-center gap-2">
-          <Avatar className="h-7 w-7">
-            {creatorAvatar ? (
-              <AvatarImage src={creatorAvatar} alt={creatorName} />
-            ) : (
-              <AvatarFallback>
-                <User className="h-4 w-4" />
-              </AvatarFallback>
-            )}
-          </Avatar>
-          <span className="text-sm font-medium">Created by {creatorName}</span>
+      {/* Only show creator info if the viewer is not the creator */}
+      {!isCreator && (
+        <div className="bg-background p-2 flex items-center border-b">
+          <div className="flex items-center gap-2">
+            <Avatar className="h-7 w-7">
+              {creatorAvatar ? (
+                <AvatarImage src={creatorAvatar} alt={creatorName} />
+              ) : (
+                <AvatarFallback>
+                  <User className="h-4 w-4" />
+                </AvatarFallback>
+              )}
+            </Avatar>
+            <span className="text-sm font-medium">Created by {creatorName}</span>
+          </div>
         </div>
-      </div>
+      )}
+      
       <div className="flex-1 min-h-0 relative">
         <div className="absolute inset-0">
           {id && (
