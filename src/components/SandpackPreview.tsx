@@ -3,12 +3,11 @@ import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, RefreshCcw } from "lucide-react";
 import { Button } from "./ui/button";
-import { toast } from "./ui/use-toast";
 import { useToast } from "@/hooks/use-toast";
 import { unzipToFiles } from "@/utils/zip-utils";
 import { Sandpack } from "@codesandbox/sandpack-react";
-// Update the CSS import to use the correct path
-import "@codesandbox/sandpack-react/style.css";
+import { PreviewFallback } from "./PreviewFallback";
+// Remove problematic CSS import and only use our custom CSS
 import "@/styles/sandpack-fix.css";
 
 interface SandpackPreviewProps {
@@ -31,6 +30,7 @@ export function SandpackPreview({
   const [entryFile, setEntryFile] = useState("index.html");
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
+  const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
     const fetchPrototypeFiles = async () => {
@@ -128,6 +128,12 @@ export function SandpackPreview({
     }
   }, [onShare, filesUrl, toast]);
 
+  // Error handling for Sandpack
+  const handleSandpackError = useCallback(() => {
+    console.error("Sandpack failed to render, using fallback");
+    setUseFallback(true);
+  }, []);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full bg-background">
@@ -158,37 +164,46 @@ export function SandpackPreview({
     );
   }
 
+  if (useFallback) {
+    return <PreviewFallback files={files} mainFile={entryFile} />;
+  }
+
   // Only show sharing controls if the onShare prop is provided
   const showShareButton = !!onShare;
 
-  return (
-    <div className="h-full relative">
-      {/* Other UI elements can be added here (e.g., toolbar) */}
-      <div className="h-full">
-        <Sandpack
-          template="static"
-          files={files}
-          options={{
-            activeFile: entryFile,
-            visibleFiles: [entryFile],
-            editorHeight: "0px", // Hide editor
-            showNavigator: false,
-            showLineNumbers: false,
-            showInlineErrors: false,
-            showTabs: false,
-            closableTabs: false,
-            wrapContent: false,
-            readOnly: true,
-            showConsole: false,
-            showConsoleButton: false,
-          }}
-          customSetup={{
-            entry: entryFile,
-            environment: "static",
-          }}
-          theme="light"
-        />
+  try {
+    return (
+      <div className="h-full relative">
+        <div className="h-full">
+          <Sandpack
+            template="static"
+            files={files}
+            options={{
+              activeFile: entryFile,
+              visibleFiles: [entryFile],
+              editorHeight: "0px", // Hide editor
+              showNavigator: false,
+              showLineNumbers: false,
+              showInlineErrors: false,
+              showTabs: false,
+              closableTabs: false,
+              wrapContent: false,
+              readOnly: true,
+              showConsole: false,
+              showConsoleButton: false,
+            }}
+            customSetup={{
+              entry: entryFile,
+              environment: "static",
+            }}
+            theme="light"
+            key={prototypeId} // Force re-render when prototype ID changes
+          />
+        </div>
       </div>
-    </div>
-  );
+    );
+  } catch (err) {
+    console.error("Sandpack render error:", err);
+    return <PreviewFallback files={files} mainFile={entryFile} />;
+  }
 }
