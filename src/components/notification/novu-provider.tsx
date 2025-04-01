@@ -32,9 +32,9 @@ export function NovuNotificationProvider({ children }: NovuNotificationProviderP
       }}
       subscriberHash={undefined} // Add a hash if your backend provides one for security
       styles={{
-        variables: {
-          main: "#DDD450",
-          light: "#0E121B"
+        colorScheme: {
+          primary: "#DDD450",
+          secondary: "#0E121B"
         }
       }}
     >
