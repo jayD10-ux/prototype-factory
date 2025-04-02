@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Prototype } from "@/types/prototype";
 import { useIframeStability } from "@/hooks/use-iframe-stability";
@@ -51,10 +50,12 @@ export function PrototypePreviewThumbnail({ prototype, className = "" }: Prototy
             title={`Preview of ${prototype.name}`}
             className="w-full h-full border-none"
             style={{ opacity: isLoading ? 0 : 1, transition: "opacity 0.3s ease" }}
-            sandbox="allow-scripts"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
             loading="lazy"
             onLoad={handleLoad}
             onError={handleError}
+            referrerPolicy="no-referrer"
+            allow="accelerometer; camera; encrypted-media; fullscreen; geolocation; gyroscope; microphone; midi"
           />
         </>
       ) : (

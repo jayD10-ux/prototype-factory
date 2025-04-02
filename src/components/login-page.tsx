@@ -23,6 +23,7 @@ const LoginPage = () => {
       });
 
       if (error) throw error;
+      navigate("/dashboard");
     } catch (error: any) {
       toast({
         title: "Demo login failed",
@@ -44,6 +45,7 @@ const LoginPage = () => {
       });
 
       if (error) throw error;
+      navigate("/dashboard");
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -59,6 +61,9 @@ const LoginPage = () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "github",
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
       });
       if (error) throw error;
     } catch (error: any) {
