@@ -40,8 +40,8 @@ export function usePrototypeFeedback(prototypeId: string) {
     const fetchFeedback = async () => {
       setIsLoading(true);
       try {
-        const { data: session } = await supabase.auth.getSession();
-        if (session.session) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
           const { data: prototype, error: prototypeError } = await supabase
             .from('prototypes')
             .select('created_by')
@@ -50,7 +50,7 @@ export function usePrototypeFeedback(prototypeId: string) {
           
           if (prototypeError) {
             console.error("Error checking prototype access:", prototypeError);
-          } else if (prototype && prototype.created_by !== session.session.user.id) {
+          } else if (prototype && prototype.created_by !== sessionData.session.user.id) {
             console.warn("User doesn't own this prototype - would check for sharing permissions here");
           }
         }

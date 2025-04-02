@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,7 +11,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { PrototypeDetail } from "@/components/PrototypeDetail";
 import { SupabaseProvider } from "@/lib/supabase-provider";
-import type { User, Session } from '@supabase/supabase-js';
+import type { User, Session } from '@/types/supabase';
 import LoginPage from './components/login-page';
 import { EnvironmentBadge } from "./components/environment-badge";
 import Onboarding from "./pages/Onboarding";

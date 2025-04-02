@@ -66,13 +66,13 @@ export function usePrototypeSharing(prototypeId: string) {
         });
       } else {
         // Create new share
-        const { data: userData } = await supabase.auth.getSession();
+        const { data } = await supabase.auth.getSession();
 
         const { error } = await supabase
           .from('prototype_shares' as any)
           .insert({
             prototype_id: prototypeId,
-            shared_by: userData.session?.user.id,
+            shared_by: data.session?.user.id,
             email: shareData.email,
             permission: shareData.permission,
             is_link_share: false,
@@ -115,7 +115,7 @@ export function usePrototypeSharing(prototypeId: string) {
       // Fixed: Using double type assertion to avoid TypeScript errors
       const typedExistingShares = existingShares as unknown as { id: string }[] | null;
       
-      const { data: userData } = await supabase.auth.getSession();
+      const { data } = await supabase.auth.getSession();
       
       if (typedExistingShares && typedExistingShares.length > 0) {
         // Update existing link share
@@ -134,7 +134,7 @@ export function usePrototypeSharing(prototypeId: string) {
           .from('prototype_shares' as any)
           .insert({
             prototype_id: prototypeId,
-            shared_by: userData.session?.user.id,
+            shared_by: data.session?.user.id,
             is_link_share: true,
             is_public: options.is_public,
             permission: options.permission

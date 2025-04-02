@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { validatePrototypeZip } from '../utils/zip-utils';
+
 export function UploadPrototypeDialog({
   onUpload
 }: {
@@ -24,6 +25,7 @@ export function UploadPrototypeDialog({
   } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
   const onDrop = async (acceptedFiles: File[]) => {
     try {
       const file = acceptedFiles[0];
@@ -175,6 +177,7 @@ export function UploadPrototypeDialog({
       setUploadProgress(0);
     }
   };
+
   const {
     getRootProps,
     getInputProps,
@@ -192,83 +195,83 @@ export function UploadPrototypeDialog({
     },
     maxSize: 1024 * 1024 * 1024 // 1GB size limit
   });
+
   return <>
-      
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add New Prototype</DialogTitle>
-            <DialogDescription>
-              Upload your prototype files (HTML, React components) or a ZIP archive containing your project.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <Input id="name" value={name} onChange={e => setName(e.target.value)} className="col-span-3" placeholder="Enter prototype name" />
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add New Prototype</DialogTitle>
+          <DialogDescription>
+            Upload your prototype files (HTML, React components) or a ZIP archive containing your project.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="name" className="text-right">
+              Name
+            </Label>
+            <Input id="name" value={name} onChange={e => setName(e.target.value)} className="col-span-3" placeholder="Enter prototype name" />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="figmaUrl" className="text-right">
+              Figma URL
+            </Label>
+            <div className="col-span-3 space-y-1">
+              <Input id="figmaUrl" value={figmaUrl} onChange={e => setFigmaUrl(e.target.value)} className="w-full" placeholder="https://www.figma.com/file/..." />
+              <p className="text-xs text-muted-foreground">
+                Link your Figma design to view it alongside your prototype
+              </p>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="figmaUrl" className="text-right">
-                Figma URL
-              </Label>
-              <div className="col-span-3 space-y-1">
-                <Input id="figmaUrl" value={figmaUrl} onChange={e => setFigmaUrl(e.target.value)} className="w-full" placeholder="https://www.figma.com/file/..." />
+          </div>
+        </div>
+        
+        <div {...getRootProps()} className="group relative">
+          <div className={`flex h-64 w-full flex-col items-center justify-center rounded-lg border-2 border-dashed 
+            ${isDragActive ? 'border-primary bg-primary/10' : 'border-muted-foreground/50'} 
+            transition-colors hover:border-primary p-6`}>
+            <div className="space-y-4 text-center">
+              <UploadCloud className="mx-auto h-8 w-8 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">
+                  {isDragActive ? 'Drop to upload' : 'Drag files here or click to select'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Supported formats:
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  Link your Figma design to view it alongside your prototype
+                  <strong>HTML:</strong> .html, .htm
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <strong>React/JS:</strong> .jsx, .tsx, .js, .ts
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <strong>Archive:</strong> .zip (max 1GB)
                 </p>
               </div>
-            </div>
-          </div>
-          
-          <div {...getRootProps()} className="group relative">
-            <div className={`flex h-64 w-full flex-col items-center justify-center rounded-lg border-2 border-dashed 
-              ${isDragActive ? 'border-primary bg-primary/10' : 'border-muted-foreground/50'} 
-              transition-colors hover:border-primary p-6`}>
-              <div className="space-y-4 text-center">
-                <UploadCloud className="mx-auto h-8 w-8 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">
-                    {isDragActive ? 'Drop to upload' : 'Drag files here or click to select'}
-                  </p>
+              {uploadProgress > 0 && <div className="w-full max-w-xs mx-auto">
+                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                    <div className="h-full bg-primary transition-all duration-300" style={{
+                      width: `${uploadProgress}%`
+                    }} />
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Supported formats:
+                    {uploadProgress === 100 ? 'Processing...' : `Uploading: ${uploadProgress}%`}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    <strong>HTML:</strong> .html, .htm
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    <strong>React/JS:</strong> .jsx, .tsx, .js, .ts
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Archive:</strong> .zip (max 1GB)
-                  </p>
-                </div>
-                {uploadProgress > 0 && <div className="w-full max-w-xs mx-auto">
-                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                      <div className="h-full bg-primary transition-all duration-300" style={{
-                    width: `${uploadProgress}%`
-                  }} />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {uploadProgress === 100 ? 'Processing...' : `Uploading: ${uploadProgress}%`}
-                    </p>
-                  </div>}
-              </div>
+                </div>}
             </div>
-            <input {...getInputProps()} />
           </div>
-          <DialogFooter>
-            <Button type="submit" onClick={() => {
+          <input {...getInputProps()} />
+        </div>
+        <DialogFooter>
+          <Button type="submit" onClick={() => {
             const input = document.querySelector('input[type="file"]') as HTMLInputElement;
             if (input) input.click();
           }}>
-              Select Files
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>;
+            Select Files
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </>;
 }

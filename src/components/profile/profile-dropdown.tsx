@@ -13,7 +13,7 @@ import { ProfileAvatar } from "./profile-avatar";
 import { ProfileDialog } from "./profile-dialog";
 import { useSupabase } from "@/lib/supabase-provider";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, User, Settings } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 
 export function ProfileDropdown() {
   const { supabase, session } = useSupabase();
