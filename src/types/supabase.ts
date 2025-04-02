@@ -1,12 +1,10 @@
 
 // This file defines TypeScript types for Supabase SDK
 
-// Import types correctly from gotrue-js
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { User as AuthUser, Session as AuthSession } from '@supabase/gotrue-js';
+// Import types directly from supabase-js
+import type { SupabaseClient, User, Session } from '@supabase/supabase-js';
 
 // Re-export the types for use throughout the app
-export type User = AuthUser;
-export type Session = AuthSession;
+export type { User, Session };
 
 export type TypedSupabaseClient = SupabaseClient;
