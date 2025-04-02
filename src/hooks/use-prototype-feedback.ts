@@ -57,6 +57,32 @@ export function usePrototypeFeedback(prototypeId: string) {
     }
   });
 
+  const checkUserPermission = async (prototypeId: string): Promise<boolean> => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session) {
+        return false;
+      }
+
+      const userId = sessionData.session.user.id;
+
+      const { data: prototypeData } = await supabase
+        .from('prototypes')
+        .select('created_by')
+        .eq('id', prototypeId)
+        .single();
+
+      if (prototypeData?.created_by === userId) {
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error("Error checking permission:", error);
+      return false;
+    }
+  };
+
   const addFeedback = async (feedbackData: Omit<PrototypeFeedback, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       setIsAddingFeedback(true);
@@ -258,6 +284,36 @@ export function usePrototypeFeedback(prototypeId: string) {
     }
   };
 
+  const toggleReaction = async (feedbackId: string, reactionType: string) => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session?.user?.id) {
+        throw new Error("User not authenticated");
+      }
+
+      const { error } = await supabase
+        .from('prototype_reactions')
+        .update({ reaction_type: reactionType })
+        .eq('feedback_id', feedbackId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Reaction toggled",
+        description: "Your reaction has been updated."
+      });
+
+      refetchFeedback();
+    } catch (error) {
+      console.error("Error toggling reaction:", error);
+      toast({
+        title: "Error",
+        description: "Failed to toggle reaction. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return {
     feedbackItems,
     isLoadingFeedback,
@@ -270,6 +326,7 @@ export function usePrototypeFeedback(prototypeId: string) {
     resolveFeedback,
     addReaction,
     removeReaction,
-    getReactions
+    getReactions,
+    checkUserPermission
   };
 }
