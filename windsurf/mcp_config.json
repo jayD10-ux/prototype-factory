@@ -1,0 +1,20 @@
+
+{
+  "server": {
+    "type": "postgres",
+    "options": {
+      "connectionString": "${SUPABASE_DB_URL}",
+      "ssl": true
+    }
+  },
+  "models": {
+    "directory": "./windsurf/models"
+  },
+  "openapi": {
+    "enabled": true,
+    "path": "/api-docs"
+  },
+  "logger": {
+    "level": "debug"
+  }
+}
