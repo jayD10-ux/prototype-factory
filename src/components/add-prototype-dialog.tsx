@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -329,6 +329,9 @@ export function AddPrototypeDialog({ open, onOpenChange }: AddPrototypeDialogPro
           </div>
         </div>
       </DialogContent>
+      <DialogFooter>
+        {/* Add any footer content here */}
+      </DialogFooter>
     </Dialog>
   );
 }
