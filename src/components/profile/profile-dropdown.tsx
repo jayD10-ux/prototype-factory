@@ -1,109 +1,90 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { ProfileAvatar } from "./profile-avatar";
-import { ProfileDialog } from "./profile-dialog";
-import { useSupabase } from "@/lib/supabase-provider";
-import { useToast } from "@/hooks/use-toast";
-import { LogOut, User } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useSupabase } from "@/lib/supabase-provider"
+import { useNavigate } from "react-router-dom"
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { LogOut } from "lucide-react"
 
 export function ProfileDropdown() {
-  const { supabase, session } = useSupabase();
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
-  const [profileData, setProfileData] = useState<{
-    name: string | null;
-    avatar_url: string | null;
-  }>({
-    name: null,
-    avatar_url: null
-  });
+  const { supabase, session } = useSupabase()
+  const navigate = useNavigate()
+  const [isLoading, setIsLoading] = useState(false)
+  const [profileName, setProfileName] = useState<string | null>(null);
+  const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchProfileData = async () => {
-      if (!session?.user?.id) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('name, avatar_url')
-          .eq('id', session.user.id)
-          .single();
-          
-        if (error) throw error;
-        
-        if (data) {
-          setProfileData({
-            name: data.name,
-            avatar_url: data.avatar_url
-          });
+    const fetchProfile = async () => {
+      if (session?.user) {
+        try {
+          const { data: profileData, error } = await supabase
+            .from('profiles')
+            .select('name, avatar_url')
+            .eq('id', session.user.id)
+            .single();
+
+          if (error) {
+            console.error('Error fetching profile:', error);
+          } else {
+            setProfileName(profileData?.name || null);
+            setProfileAvatar(profileData?.avatar_url || null);
+          }
+        } catch (error) {
+          console.error('Error fetching profile:', error);
         }
-      } catch (error) {
-        console.error('Error fetching profile data:', error);
       }
     };
-    
-    fetchProfileData();
+
+    fetchProfile();
   }, [session, supabase]);
 
-  const handleLogout = async () => {
+  const handleSignOut = async () => {
     try {
+      setIsLoading(true);
       await supabase.auth.signOut();
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out",
-      });
-      navigate('/auth');
+      navigate("/auth");
     } catch (error) {
-      console.error('Error logging out:', error);
-      toast({
-        title: "Error",
-        description: "Failed to log out",
-        variant: "destructive",
-      });
+      console.error("Error signing out:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <div className="cursor-pointer">
-            <ProfileAvatar 
-              url={profileData.avatar_url} 
-              size="sm" 
-              editable={false} 
-            />
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-8 w-8 p-0 rounded-full">
+          <Avatar className="h-8 w-8">
+            {profileAvatar ? (
+              <AvatarImage src={profileAvatar} alt={profileName || "User Avatar"} />
+            ) : (
+              <AvatarFallback>{profileName?.slice(0, 2).toUpperCase() || "US"}</AvatarFallback>
+            )}
+          </Avatar>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56" align="end" forceMount>
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">{profileName || "Guest"}</p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {session?.user?.email}
+            </p>
           </div>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>
-            {profileData.name || session?.user?.email || 'My Account'}
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setIsProfileDialogOpen(true)}>
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            <span>Logout</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      
-      <ProfileDialog 
-        open={isProfileDialogOpen}
-        onOpenChange={setIsProfileDialogOpen}
-      />
-    </>
-  );
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem disabled={isLoading} onClick={handleSignOut} className="cursor-pointer">
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Log out</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 }

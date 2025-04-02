@@ -1,101 +1,95 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
+  const handleDemoLogin = async () => {
     try {
+      setIsLoading(true);
       const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: "demo@example.com",
+        password: "demo123",
       });
 
       if (error) throw error;
-      navigate('/dashboard');
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Login failed');
+    } catch (error: any) {
+      toast({
+        title: "Demo login failed",
+        description: error.message,
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-
     try {
+      setIsLoading(true);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
-      navigate('/dashboard');
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Login failed');
+    } catch (error: any) {
+      toast({
+        title: "Login failed",
+        description: error.message,
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleMagicLinkLogin = async () => {
-    setLoading(true);
-    setError('');
-
+  const handleGitHubLogin = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
+        provider: "github",
       });
-
       if (error) throw error;
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Login failed');
-    } finally {
-      setLoading(false);
+    } catch (error: any) {
+      toast({
+        title: "Login failed",
+        description: "Could not sign in with GitHub. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleSkip = () => {
-    localStorage.setItem('skippedLogin', 'true');
-    navigate('/dashboard');
+    localStorage.setItem("skippedLogin", "true");
+    navigate("/dashboard");
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Welcome to Prototype Factory</CardTitle>
-          <CardDescription>Sign in to continue</CardDescription>
+          <CardTitle>Welcome Back</CardTitle>
+          <CardDescription>Sign in to your account to continue</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleEmailLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -106,28 +100,28 @@ const LoginPage = () => {
               <Input
                 id="password"
                 type="password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
-            {error && <p className="text-sm text-red-500">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Logging in...' : 'Login'}
-            </Button>
-            <Button type="button" className="w-full" onClick={handleEmailLogin}>
-              Login with Email
-            </Button>
-            <Button type="button" className="w-full" onClick={handleMagicLinkLogin}>
-              Login with Google
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Loading..." : "Sign In"}
             </Button>
           </form>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button variant="outline" onClick={handleSkip}>
+          <div className="flex flex-col space-y-2 mt-4">
+            <Button type="button" className="w-full" onClick={handleGitHubLogin} variant="secondary" disabled={isLoading}>
+              Sign in with GitHub
+            </Button>
+            <Button type="button" className="w-full" onClick={handleDemoLogin} variant="secondary" disabled={isLoading}>
+              Sign in with Demo Account
+            </Button>
+          </div>
+          <Button type="button" variant="link" className="w-full mt-4" onClick={handleSkip}>
             Skip Login
           </Button>
-        </CardFooter>
+        </CardContent>
       </Card>
     </div>
   );

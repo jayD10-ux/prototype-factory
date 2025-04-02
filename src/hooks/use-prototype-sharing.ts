@@ -32,15 +32,23 @@ export function usePrototypeSharing(prototypeId: string) {
     }
   });
 
-  const createEmailShare = async (shareData: ShareFormData) => {
+  const createEmailShare = async (formData: ShareFormData) => {
     try {
       setIsCreatingShare(true);
       
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      
+      if (!userId) {
+        console.error("User not logged in");
+        throw new Error("User not logged in");
+      }
+
       const { data: existingShares } = await supabase
         .from('prototype_shares' as any)
         .select('id')
         .eq('prototype_id', prototypeId)
-        .eq('email', shareData.email)
+        .eq('email', formData.email)
         .eq('is_link_share', false);
 
       const typedExistingShares = existingShares as unknown as { id: string }[] | null;
@@ -48,14 +56,14 @@ export function usePrototypeSharing(prototypeId: string) {
       if (typedExistingShares && typedExistingShares.length > 0) {
         const { error } = await supabase
           .from('prototype_shares' as any)
-          .update({ permission: shareData.permission })
+          .update({ permission: formData.permission })
           .eq('id', typedExistingShares[0].id);
 
         if (error) throw error;
         
         toast({
           title: "Share updated",
-          description: `Updated permissions for ${shareData.email}`
+          description: `Updated permissions for ${formData.email}`
         });
       } else {
         const { data } = await supabase.auth.getSession();
@@ -65,8 +73,8 @@ export function usePrototypeSharing(prototypeId: string) {
           .insert({
             prototype_id: prototypeId,
             shared_by: data.session?.user.id,
-            email: shareData.email,
-            permission: shareData.permission,
+            email: formData.email,
+            permission: formData.permission,
             is_link_share: false,
             is_public: false
           });
@@ -75,7 +83,7 @@ export function usePrototypeSharing(prototypeId: string) {
 
         toast({
           title: "Share created",
-          description: `Shared prototype with ${shareData.email}`
+          description: `Shared prototype with ${formData.email}`
         });
       }
 
@@ -96,6 +104,14 @@ export function usePrototypeSharing(prototypeId: string) {
     try {
       setIsUpdatingShare(true);
       
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      
+      if (!userId) {
+        console.error("User not logged in");
+        throw new Error("User not logged in");
+      }
+
       const { data: existingShares } = await supabase
         .from('prototype_shares' as any)
         .select('id')
