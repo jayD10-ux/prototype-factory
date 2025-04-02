@@ -2,10 +2,24 @@
 import React from 'react';
 import { usePrototypeFeedback, PrototypeFeedback } from '@/hooks/use-prototype-feedback';
 import { User } from '@/types/supabase';
+import { FeedbackPoint as FeedbackPointType } from '@/types/feedback';
 
-// Define a FeedbackPoint type to ensure prototype_id is required
-export interface FeedbackPoint extends Omit<PrototypeFeedback, 'prototype_id'> {
+// Define a FeedbackPoint type that's compatible with the one in types/feedback.ts
+export interface FeedbackPoint extends Omit<PrototypeFeedback, 'prototype_id' | 'created_by'> {
   prototype_id: string;
+  created_by: string;
+  // Include all other required fields from the FeedbackPointType
+  id: string;
+  content: string;
+  position: {
+    x: number;
+    y: number;
+    width?: number;
+    height?: number;
+  };
+  created_at: string;
+  updated_at: string | null;
+  status: string;
 }
 
 // This adapter maps our feedback hook to the expected interface for SandpackPreview
@@ -17,8 +31,12 @@ export function useFeedbackAdapter(prototypeId: string, currentUser?: User | nul
     return (feedback.feedbackItems || []).map(item => ({
       ...item,
       prototype_id: item.prototype_id || prototypeId, // Ensure prototype_id is always present
-    })) as FeedbackPoint[];
-  }, [feedback.feedbackItems, prototypeId]);
+      created_by: item.created_by || (currentUser?.id || 'anonymous'), // Ensure created_by is always present
+      created_at: item.created_at || new Date().toISOString(),
+      updated_at: item.updated_at || null,
+      status: item.status || 'open'
+    })) as unknown as FeedbackPointType[];
+  }, [feedback.feedbackItems, prototypeId, currentUser]);
   
   // Map functions to the expected interface
   const addFeedbackPoint = async (data: any) => {

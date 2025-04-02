@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
@@ -59,4 +60,3 @@ export function useSupabase() {
   }
   return context;
 }
-
