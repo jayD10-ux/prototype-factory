@@ -17,7 +17,7 @@ import { FigmaUrlForm } from './FigmaUrlForm';
 import { Loader2, Eye, AlertCircle, RefreshCw, Smartphone, Tablet, Monitor, RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { usePrototypeFeedback } from '@/hooks/use-prototype-feedback';
+import { useFeedbackAdapter } from './SandpackPreviewAdapter';
 import { FeedbackPoint as FeedbackPointType } from '@/types/feedback';
 import { useIframeStability } from '@/hooks/use-iframe-stability';
 import JSZip from 'jszip';
@@ -189,7 +189,7 @@ export function SandpackPreview({ prototypeId, url, deploymentUrl, figmaUrl, fil
     currentUser,
     addFeedbackPoint: addFeedbackPointFromHook,
     updateFeedbackPoint: updateFeedbackPointFromHook
-  } = usePrototypeFeedback(prototypeId);
+  } = useFeedbackAdapter(prototypeId);
 
   const addFeedbackPoint = useCallback((feedback: FeedbackPointType) => {
     addFeedbackPointFromHook(feedback);
