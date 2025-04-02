@@ -643,7 +643,7 @@ if (typeof window.menuitemfn === 'undefined') {
               const refreshSrc = currentSrc.includes('?') 
                 ? `${currentSrc}&_refresh=${Date.now()}` 
                 : `${currentSrc}?_refresh=${Date.now()}`;
-                
+              
               iframe.src = refreshSrc;
               
               const onLoad = () => {
