@@ -8,6 +8,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabase } from '@/lib/supabase-provider';
 import NotFound from './NotFound';
+import { Button } from '@/components/ui/button';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function SharedPrototype() {
   const { id } = useParams<{ id: string }>();
@@ -47,54 +50,79 @@ export default function SharedPrototype() {
         
         console.log('SharedPrototype - Prototype exists:', !!prototypeExists);
         
-        // Check for public link share access first
-        const { data: publicShare, error: publicShareError } = await supabase
-          .from('prototype_shares')
-          .select('*')
-          .eq('prototype_id', id)
-          .eq('is_link_share', true)
-          .eq('is_public', true);
-        
-        if (publicShareError) {
-          console.error('SharedPrototype - Error checking public share access:', publicShareError);
-        } else {
-          console.log('SharedPrototype - Public share records found:', publicShare?.length || 0);
-        }
-        
         let hasShareAccess = false;
         let shareRecord = null;
         
-        // If public share exists
-        if (publicShare && publicShare.length > 0) {
-          hasShareAccess = true;
-          shareRecord = publicShare[0];
-          console.log('SharedPrototype - Access granted via public link share');
-        } 
-        // If user is logged in, check for email-based share
-        else if (userEmail) {
-          console.log('SharedPrototype - Checking email-based share for:', userEmail);
-          
-          const { data: emailShare, error: emailShareError } = await supabase
+        try {
+          // Check for public link share access first
+          // Using maybeSingle() to avoid errors when no record is found
+          const { data: publicShare, error: publicShareError } = await supabase
             .from('prototype_shares')
             .select('*')
             .eq('prototype_id', id)
-            .eq('email', userEmail);
+            .eq('is_link_share', true)
+            .eq('is_public', true)
+            .maybeSingle();
           
-          if (emailShareError) {
-            console.error('SharedPrototype - Error checking email share:', emailShareError);
-          } else {
-            console.log('SharedPrototype - Email share records found:', emailShare?.length || 0);
+          if (publicShareError) {
+            console.error('SharedPrototype - Error checking public share access:', publicShareError);
+          } else if (publicShare) {
+            console.log('SharedPrototype - Public share record found');
+            hasShareAccess = true;
+            shareRecord = publicShare;
+            console.log('SharedPrototype - Access granted via public link share');
+          }
+        } catch (e) {
+          console.error('SharedPrototype - Error in public share check:', e);
+          // Continue to email check even if this fails
+        }
+        
+        // If no public share and user is logged in, check for email-based share
+        if (!hasShareAccess && userEmail) {
+          try {
+            console.log('SharedPrototype - Checking email-based share for:', userEmail);
             
-            if (emailShare && emailShare.length > 0) {
+            const { data: emailShare, error: emailShareError } = await supabase
+              .from('prototype_shares')
+              .select('*')
+              .eq('prototype_id', id)
+              .eq('email', userEmail)
+              .maybeSingle();
+            
+            if (emailShareError) {
+              console.error('SharedPrototype - Error checking email share:', emailShareError);
+            } else if (emailShare) {
+              console.log('SharedPrototype - Email share record found');
               hasShareAccess = true;
-              shareRecord = emailShare[0];
+              shareRecord = emailShare;
               console.log('SharedPrototype - Access granted via email share');
             }
+          } catch (e) {
+            console.error('SharedPrototype - Error in email share check:', e);
+          }
+        }
+
+        // Check if user is the prototype owner (they should always have access)
+        if (!hasShareAccess && session?.user?.id) {
+          try {
+            const { data: ownedPrototype, error: ownedError } = await supabase
+              .from('prototypes')
+              .select('id')
+              .eq('id', id)
+              .eq('created_by', session.user.id)
+              .maybeSingle();
+            
+            if (!ownedError && ownedPrototype) {
+              console.log('SharedPrototype - User is prototype owner');
+              hasShareAccess = true;
+            }
+          } catch (e) {
+            console.error('SharedPrototype - Error checking prototype ownership:', e);
           }
         }
         
         // If access is granted through any sharing method
-        if (hasShareAccess && shareRecord) {
+        if (hasShareAccess) {
           setHasAccess(true);
           
           // Get prototype details
@@ -114,12 +142,17 @@ export default function SharedPrototype() {
           
           console.log('SharedPrototype - Prototype data retrieved successfully');
           
-          // Update access timestamp
-          if (shareRecord.id) {
-            await supabase
-              .from('prototype_shares')
-              .update({ accessed_at: new Date().toISOString() })
-              .eq('id', shareRecord.id);
+          // Update access timestamp if we have a share record
+          if (shareRecord?.id) {
+            try {
+              await supabase
+                .from('prototype_shares')
+                .update({ accessed_at: new Date().toISOString() })
+                .eq('id', shareRecord.id);
+            } catch (e) {
+              console.error('Error updating access timestamp:', e);
+              // Non-critical error, continue anyway
+            }
           }
           
           // Transform the data to include creator information
@@ -142,7 +175,9 @@ export default function SharedPrototype() {
         return null;
       }
     },
-    enabled: !!id
+    enabled: !!id,
+    retry: 1, // Limit retries to avoid overwhelming the server on errors
+    refetchOnWindowFocus: false,
   });
 
   if (isLoading) {
@@ -156,6 +191,20 @@ export default function SharedPrototype() {
 
   if (error) {
     console.error('SharedPrototype - Query error:', error);
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            There was an error loading this prototype. Please try again later.
+          </AlertDescription>
+        </Alert>
+        <div className="flex justify-center">
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
+        </div>
+      </div>
+    );
   }
 
   if (!prototype || hasAccess === false) {
@@ -170,9 +219,12 @@ export default function SharedPrototype() {
             If you believe you should have access, please contact the prototype owner.
           </p>
         ) : (
-          <p className="text-sm text-muted-foreground">
-            You may need to sign in to access this prototype.
-          </p>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              You may need to sign in to access this prototype.
+            </p>
+            <Button onClick={() => window.location.href = '/auth'}>Sign In</Button>
+          </div>
         )}
       </div>
     );
