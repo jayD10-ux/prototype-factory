@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Prototype } from "@/types/prototype";
-import { useIframeStability } from "@/hooks/use-iframe-stability";
 
 interface PrototypePreviewThumbnailProps {
   prototype: Prototype;
@@ -10,62 +9,98 @@ interface PrototypePreviewThumbnailProps {
 export function PrototypePreviewThumbnail({ prototype, className = "" }: PrototypePreviewThumbnailProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [previewError, setPreviewError] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0); // Add key to force iframe refresh
 
-  // More permissive check - if we have any URL, try to load it
-  const previewUrl = prototype.deployment_url || prototype.preview_url || null;
+  // Try deployment URL first, then preview URL, then sandbox URL if available
+  const getPreviewUrl = () => {
+    if (prototype.deployment_status === 'deployed' && prototype.deployment_url) {
+      return prototype.deployment_url;
+    }
+    if (prototype.preview_url) {
+      return prototype.preview_url;
+    }
+    if (prototype.sandbox_config) {
+      // If we have sandbox config, we could potentially render a sandbox preview
+      return null;
+    }
+    return null;
+  };
+
+  const previewUrl = getPreviewUrl();
   const hasValidPreview = !!previewUrl;
-  
-  // Add debug logging to help troubleshoot
+
+  // Add debug logging
   useEffect(() => {
-    if (prototype.id && !hasValidPreview) {
-      console.debug(`Prototype ${prototype.id} has no valid preview URL:`, { 
+    if (prototype.id) {
+      console.debug(`Prototype ${prototype.id} preview status:`, {
         deployment_url: prototype.deployment_url,
         deployment_status: prototype.deployment_status,
-        preview_url: prototype.preview_url
+        preview_url: prototype.preview_url,
+        sandbox_config: prototype.sandbox_config,
+        final_url: previewUrl
       });
     }
-  }, [prototype, hasValidPreview]);
+  }, [prototype, previewUrl]);
 
   const handleLoad = () => {
     setIsLoading(false);
+    setPreviewError(false);
   };
 
   const handleError = () => {
     setIsLoading(false);
     setPreviewError(true);
-    console.debug(`Preview load error for prototype ${prototype.id}:`, previewUrl);
+    console.error(`Preview load error for prototype ${prototype.id}:`, previewUrl);
+    // Attempt to reload once
+    if (iframeKey === 0) {
+      setIframeKey(1);
+    }
+  };
+
+  const renderPreview = () => {
+    if (!hasValidPreview) {
+      return (
+        <div className="flex items-center justify-center h-full bg-muted/50">
+          <p className="text-sm text-muted-foreground">No preview available</p>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+            <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-foreground"></div>
+          </div>
+        )}
+        <iframe
+          key={iframeKey}
+          src={previewUrl}
+          title={`Preview of ${prototype.name}`}
+          className="w-full h-full border-none"
+          style={{ 
+            opacity: isLoading ? 0 : 1, 
+            transition: "opacity 0.3s ease",
+            pointerEvents: "none" // Prevent interaction with iframe in card view
+          }}
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+          loading="lazy"
+          onLoad={handleLoad}
+          onError={handleError}
+          referrerPolicy="no-referrer"
+        />
+      </>
+    );
   };
 
   return (
-    <div className={`relative w-full h-full overflow-hidden bg-muted ${className}`}>
-      {hasValidPreview && !previewError ? (
-        <>
-          {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-muted">
-              <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-foreground"></div>
-            </div>
-          )}
-          <iframe 
-            src={previewUrl}
-            title={`Preview of ${prototype.name}`}
-            className="w-full h-full border-none"
-            style={{ opacity: isLoading ? 0 : 1, transition: "opacity 0.3s ease" }}
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
-            loading="lazy"
-            onLoad={handleLoad}
-            onError={handleError}
-            referrerPolicy="no-referrer"
-            allow="accelerometer; camera; encrypted-media; fullscreen; geolocation; gyroscope; microphone; midi"
-          />
-        </>
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center p-4">
-          {previewError ? (
-            <p className="text-xs text-muted-foreground text-center">Preview couldn't be loaded</p>
-          ) : !hasValidPreview ? (
-            <p className="text-xs text-muted-foreground text-center">No preview available</p>
-          ) : null}
+    <div className={`relative w-full h-full overflow-hidden ${className}`}>
+      {previewError ? (
+        <div className="flex items-center justify-center h-full bg-muted/50">
+          <p className="text-sm text-muted-foreground">Failed to load preview</p>
         </div>
+      ) : (
+        renderPreview()
       )}
     </div>
   );
