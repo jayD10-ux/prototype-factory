@@ -1,26 +1,37 @@
 
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PrototypePreview } from '@/components/prototype-preview';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useSupabase } from '@/lib/supabase-provider';
 import NotFound from './NotFound';
 import { Button } from '@/components/ui/button';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Download, User } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Card } from '@/components/ui/card';
 
 export default function SharedPrototype() {
   const { id } = useParams<{ id: string }>();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
+  const [session, setSession] = useState<any>(null);
   const { toast } = useToast();
-  const { session } = useSupabase();
   
   console.log('SharedPrototype - Prototype ID from URL:', id);
-  console.log('SharedPrototype - User authenticated:', !!session);
 
+  useEffect(() => {
+    // Check if the user is authenticated
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+      setIsAnonymous(!data.session);
+    };
+    
+    checkSession();
+  }, []);
+  
   const userEmail = session?.user?.email;
   
   // Check if the prototype is accessible
@@ -54,8 +65,7 @@ export default function SharedPrototype() {
         let shareRecord = null;
         
         try {
-          // Check for public link share access first
-          // Using maybeSingle() to avoid errors when no record is found
+          // Check for public link share access first - this works for anonymous users
           const { data: publicShare, error: publicShareError } = await supabase
             .from('prototype_shares')
             .select('*')
@@ -180,6 +190,10 @@ export default function SharedPrototype() {
     refetchOnWindowFocus: false,
   });
 
+  const handleSignIn = () => {
+    window.location.href = '/auth';
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -223,7 +237,7 @@ export default function SharedPrototype() {
             <p className="text-sm text-muted-foreground">
               You may need to sign in to access this prototype.
             </p>
-            <Button onClick={() => window.location.href = '/auth'}>Sign In</Button>
+            <Button onClick={handleSignIn}>Sign In</Button>
           </div>
         )}
       </div>
@@ -232,11 +246,44 @@ export default function SharedPrototype() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-4">{prototype.name || 'Shared Prototype'}</h1>
-      {prototype.creator_name && (
-        <p className="text-muted-foreground mb-4">Created by {prototype.creator_name}</p>
-      )}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">{prototype.name || 'Shared Prototype'}</h1>
+          {prototype.creator_name && (
+            <p className="text-muted-foreground">Created by {prototype.creator_name}</p>
+          )}
+        </div>
+        
+        {isAnonymous && (
+          <Card className="p-4 bg-muted/50 mt-4 md:mt-0">
+            <div className="flex flex-col md:flex-row items-center gap-4">
+              <p className="text-sm text-muted-foreground">You're viewing as a guest</p>
+              <Button onClick={handleSignIn} variant="outline" size="sm">
+                <User className="mr-2 h-4 w-4" />
+                Sign In for Full Access
+              </Button>
+            </div>
+          </Card>
+        )}
+      </div>
+      
       <PrototypePreview prototypeId={id || ''} className="border rounded-lg" />
+      
+      {isAnonymous && (
+        <div className="mt-6 p-4 border border-dashed rounded-lg">
+          <h3 className="text-lg font-medium mb-2">Want more?</h3>
+          <p className="text-muted-foreground mb-4">Sign in to access additional features:</p>
+          <ul className="list-disc pl-5 mb-4 text-sm text-muted-foreground space-y-1">
+            <li>Download prototype files</li>
+            <li>Add feedback and comments</li>
+            <li>Create your own prototypes</li>
+            <li>Collaborate with team members</li>
+          </ul>
+          <Button onClick={handleSignIn}>
+            Sign In or Create Account
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
