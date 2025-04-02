@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -28,7 +27,6 @@ export function ProfileDropdown() {
     avatar_url: null
   });
 
-  // Fetch user profile data when component mounts
   useEffect(() => {
     const fetchProfileData = async () => {
       if (!session?.user?.id) return;

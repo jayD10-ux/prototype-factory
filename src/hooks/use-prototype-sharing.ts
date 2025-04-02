@@ -10,7 +10,6 @@ export function usePrototypeSharing(prototypeId: string) {
   const [isUpdatingShare, setIsUpdatingShare] = useState(false);
   const [isDeletingShare, setIsDeletingShare] = useState(false);
 
-  // Fetch shares for a prototype
   const {
     data: shares,
     isLoading: isLoadingShares,
@@ -18,7 +17,6 @@ export function usePrototypeSharing(prototypeId: string) {
   } = useQuery({
     queryKey: ['prototype-shares', prototypeId],
     queryFn: async () => {
-      // Type assertion to handle typing issue
       const { data, error } = await supabase
         .from('prototype_shares' as any)
         .select('*')
@@ -30,17 +28,14 @@ export function usePrototypeSharing(prototypeId: string) {
         throw error;
       }
 
-      // Fixed: Using double type assertion to avoid TypeScript errors
       return (data || []) as unknown as PrototypeShare[];
     }
   });
 
-  // Create email share
   const createEmailShare = async (shareData: ShareFormData) => {
     try {
       setIsCreatingShare(true);
       
-      // Check if email already has access
       const { data: existingShares } = await supabase
         .from('prototype_shares' as any)
         .select('id')
@@ -48,11 +43,9 @@ export function usePrototypeSharing(prototypeId: string) {
         .eq('email', shareData.email)
         .eq('is_link_share', false);
 
-      // Fixed: Using double type assertion to avoid TypeScript errors
       const typedExistingShares = existingShares as unknown as { id: string }[] | null;
-
+      
       if (typedExistingShares && typedExistingShares.length > 0) {
-        // Update existing share instead
         const { error } = await supabase
           .from('prototype_shares' as any)
           .update({ permission: shareData.permission })
@@ -65,7 +58,6 @@ export function usePrototypeSharing(prototypeId: string) {
           description: `Updated permissions for ${shareData.email}`
         });
       } else {
-        // Create new share
         const { data } = await supabase.auth.getSession();
 
         const { error } = await supabase
@@ -100,25 +92,21 @@ export function usePrototypeSharing(prototypeId: string) {
     }
   };
 
-  // Create or update link share
   const updateLinkShare = async (options: LinkShareOptions) => {
     try {
       setIsUpdatingShare(true);
       
-      // Check if link share already exists
       const { data: existingShares } = await supabase
         .from('prototype_shares' as any)
         .select('id')
         .eq('prototype_id', prototypeId)
         .eq('is_link_share', true);
 
-      // Fixed: Using double type assertion to avoid TypeScript errors
       const typedExistingShares = existingShares as unknown as { id: string }[] | null;
       
       const { data } = await supabase.auth.getSession();
       
       if (typedExistingShares && typedExistingShares.length > 0) {
-        // Update existing link share
         const { error } = await supabase
           .from('prototype_shares' as any)
           .update({ 
@@ -129,7 +117,6 @@ export function usePrototypeSharing(prototypeId: string) {
 
         if (error) throw error;
       } else {
-        // Create new link share
         const { error } = await supabase
           .from('prototype_shares' as any)
           .insert({
@@ -163,7 +150,6 @@ export function usePrototypeSharing(prototypeId: string) {
     }
   };
 
-  // Update share permission
   const updateSharePermission = async (shareId: string, permission: 'view' | 'edit' | 'admin') => {
     try {
       setIsUpdatingShare(true);
@@ -193,7 +179,6 @@ export function usePrototypeSharing(prototypeId: string) {
     }
   };
 
-  // Remove share
   const removeShare = async (shareId: string) => {
     try {
       setIsDeletingShare(true);
@@ -223,13 +208,11 @@ export function usePrototypeSharing(prototypeId: string) {
     }
   };
 
-  // Get link share
   const getLinkShare = () => {
     if (!shares) return null;
     return shares.find(share => share.is_link_share) || null;
   };
 
-  // Get email shares
   const getEmailShares = () => {
     if (!shares) return [];
     return shares.filter(share => !share.is_link_share);

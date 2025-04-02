@@ -39,7 +39,6 @@ export function UploadPrototypeDialog({
         return;
       }
 
-      // Check file size (1GB limit)
       const maxFileSize = 1024 * 1024 * 1024; // 1GB in bytes
       if (file.size > maxFileSize) {
         toast({
@@ -50,9 +49,7 @@ export function UploadPrototypeDialog({
         return;
       }
 
-      // Only validate ZIP files, other files will be handled directly
       if (file.name.toLowerCase().endsWith('.zip')) {
-        // Validate ZIP structure
         await validatePrototypeZip(file);
       } else if (!file.name.toLowerCase().match(/\.(html|htm|jsx|tsx|js|ts)$/)) {
         toast({
@@ -63,7 +60,6 @@ export function UploadPrototypeDialog({
         return;
       }
 
-      // Get current session
       const {
         data
       } = await supabase.auth.getSession();
@@ -77,7 +73,6 @@ export function UploadPrototypeDialog({
         return;
       }
 
-      // Create prototype entry with all required fields
       const {
         data: prototype,
         error: prototypeError
@@ -90,18 +85,14 @@ export function UploadPrototypeDialog({
       }).select().single();
       if (prototypeError) throw prototypeError;
 
-      // Upload file with progress tracking
       const filePath = `${prototype.id}/${file.name}`;
 
-      // Start tracking upload progress
       const fileReader = new FileReader();
 
-      // Set up progress tracking
       let uploadProgressInterval: number | undefined;
       fileReader.onload = async () => {
         const fileData = new Uint8Array(fileReader.result as ArrayBuffer);
 
-        // Simulate upload progress (actual progress tracking not supported by Supabase JS client)
         let progress = 0;
         uploadProgressInterval = window.setInterval(() => {
           progress += 5;
@@ -119,10 +110,8 @@ export function UploadPrototypeDialog({
           });
           if (uploadError) throw uploadError;
 
-          // Complete progress
           setUploadProgress(100);
 
-          // Process prototype
           const {
             data: processData,
             error: processError
@@ -137,7 +126,6 @@ export function UploadPrototypeDialog({
             throw new Error(processError.message || 'Failed to process prototype');
           }
 
-          // Update status to reflect processing started
           const {
             error: updateError
           } = await supabase.from('prototypes').update({
@@ -146,7 +134,6 @@ export function UploadPrototypeDialog({
           }).eq('id', prototype.id);
           if (updateError) throw updateError;
 
-          // Use correct invalidate query format
           queryClient.invalidateQueries({
             queryKey: ['prototypes']
           });
@@ -156,7 +143,6 @@ export function UploadPrototypeDialog({
           });
           setOpen(false);
 
-          // Redirect to the prototype preview
           navigate(`/prototype/${prototype.id}`);
         } catch (error) {
           throw error;
