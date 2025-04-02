@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -25,8 +24,6 @@ export default function Auth() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        // Fix: Using type-safe string comparison
-        // For Supabase v2.x, valid auth events are string literals
         if (event.toString() === 'SIGNED_UP') {
           navigate('/onboarding', { replace: true });
         } else {
@@ -60,14 +57,12 @@ export default function Auth() {
           title: "Account created!",
           description: "Please check your email to verify your account.",
         });
-        // The redirect to onboarding will happen via the onAuthStateChange listener
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        // The redirect to dashboard will happen via the onAuthStateChange listener
       }
     } catch (error: any) {
       toast({
@@ -86,7 +81,6 @@ export default function Auth() {
         provider: 'github',
       });
       if (error) throw error;
-      // The redirect to dashboard will happen via the onAuthStateChange listener
     } catch (error) {
       console.error('Error signing in:', error);
     }
