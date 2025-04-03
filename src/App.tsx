@@ -50,11 +50,12 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
       // Check if user needs onboarding
       const checkProfileCompletion = async () => {
         try {
+          // Check by clerk_id if it's a Clerk user
           const { data } = await supabase
             .from('profiles')
             .select('name')
-            .eq('id', user.id)
-            .single();
+            .eq('clerk_id', user.id)
+            .maybeSingle();
           
           setNeedsOnboarding(!data?.name);
         } catch (error) {

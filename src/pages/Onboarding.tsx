@@ -31,20 +31,25 @@ export default function Onboarding() {
 
       try {
         // Get the user ID - either from Supabase or Clerk
-        const userId = session?.user?.id || clerkUser?.id;
+        const userId = session?.user?.id;
+        const clerkId = clerkUser?.id;
         
-        if (!userId) {
+        if (!userId && !clerkId) {
           throw new Error("No user ID available");
         }
         
-        console.log("Checking profile for user ID:", userId);
+        console.log("Checking profile - Supabase ID:", userId, "Clerk ID:", clerkId);
         
-        // Check if profile exists with this id
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('name')
-          .eq('id', userId)
-          .maybeSingle();
+        // Try to find profile using the appropriate ID
+        let query = supabase.from('profiles').select('name');
+        
+        if (userId) {
+          query = query.eq('id', userId);
+        } else if (clerkId) {
+          query = query.eq('clerk_id', clerkId);
+        }
+        
+        const { data, error } = await query.maybeSingle();
           
         if (error) {
           console.error("Supabase query error:", error);

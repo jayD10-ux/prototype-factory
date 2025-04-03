@@ -51,20 +51,25 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
   });
 
   // Get user ID from either Supabase or Clerk
-  const userId = session?.user?.id || clerkUser?.id;
+  const supabaseUserId = session?.user?.id;
+  const clerkUserId = clerkUser?.id;
 
   useEffect(() => {
     const loadProfile = async () => {
-      if (!userId) return;
+      if (!supabaseUserId && !clerkUserId) return;
       
       try {
-        console.log("Loading profile for user ID:", userId);
+        console.log("Loading profile - Supabase ID:", supabaseUserId, "Clerk ID:", clerkUserId);
         
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
+        let query = supabase.from('profiles').select('*');
+        
+        if (supabaseUserId) {
+          query = query.eq('id', supabaseUserId);
+        } else if (clerkUserId) {
+          query = query.eq('clerk_id', clerkUserId);
+        }
+        
+        const { data, error } = await query.maybeSingle();
             
         if (error) {
           console.error("Error loading profile:", error);
@@ -95,10 +100,10 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
     };
     
     loadProfile();
-  }, [userId, form, toast]);
+  }, [supabaseUserId, clerkUserId, form, toast]);
 
   const onSubmit = async (values: ProfileFormValues) => {
-    if (!userId) {
+    if (!supabaseUserId && !clerkUserId) {
       toast({
         title: "Error",
         description: "You must be logged in to update your profile",
@@ -110,14 +115,25 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
     setIsLoading(true);
 
     try {
-      console.log("Submitting profile for user ID:", userId);
+      console.log("Submitting profile - Supabase ID:", supabaseUserId, "Clerk ID:", clerkUserId);
       
       let avatarPath = null;
 
       // Upload avatar if provided
       if (avatarFile) {
+        // Generate unique file path with either ID
+        const userId = supabaseUserId || clerkUserId;
         const fileExt = avatarFile.name.split('.').pop();
         const filePath = `${userId}/${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+        // Create storage bucket if it doesn't exist
+        const { data: bucketList } = await supabase.storage.listBuckets();
+        if (!bucketList?.find(bucket => bucket.name === 'avatars')) {
+          await supabase.storage.createBucket('avatars', {
+            public: true,
+            fileSizeLimit: 1024 * 1024 * 2 // 2MB
+          });
+        }
 
         const { error: uploadError } = await supabase.storage
           .from('avatars')
@@ -130,15 +146,34 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
         avatarPath = data.publicUrl;
       }
 
-      // Use the user ID directly for both Clerk and Supabase users
-      const { error } = await supabase.from('profiles').upsert({
-        id: userId,
+      // Prepare profile data
+      const profileData: any = {
         name: values.name,
         role: values.role,
         bio: values.bio,
         avatar_url: avatarPath || avatarUrl,
         updated_at: new Date().toISOString(),
-      });
+      };
+
+      // Handle different user ID types
+      if (supabaseUserId) {
+        profileData.id = supabaseUserId;
+      } else if (clerkUserId) {
+        // For Clerk users, we use clerk_id field
+        profileData.clerk_id = clerkUserId;
+        
+        // We also need an id field to satisfy the foreign key constraint
+        // The trigger we created will handle the auth.users entry
+        if (!supabaseUserId) {
+          // Generate a UUID for the Supabase ID
+          const { data: uuidData } = await supabase.rpc('gen_random_uuid');
+          profileData.id = uuidData;
+        }
+      }
+
+      console.log("Upserting profile with data:", profileData);
+
+      const { error } = await supabase.from('profiles').upsert(profileData);
 
       if (error) {
         console.error("Error upserting profile:", error);
