@@ -1,11 +1,10 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
-import { SandpackPreview } from './SandpackPreview';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ShareDialog } from './prototype/sharing/ShareDialog';
 import '@/styles/PreviewIframe.css';
+import { SandpackPreview } from './SandpackPreview';
 
 interface PreviewWindowProps {
   url?: string | null;
@@ -144,13 +143,19 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
   if (useSandpack) {
     return (
       <>
-        <SandpackPreview 
-          prototypeId={prototypeId} 
-          url={previewUrl || undefined}
-          figmaUrl={figmaUrl}
-          filesUrl={filesUrl}
-          onShare={handleShare}
-        />
+        <SandpackPreview />
+        {/* Additional components and rendering for Sandpack mode */}
+        <div className="h-full w-full">
+          {/* Insert iframe or other content here if needed */}
+          <iframe
+            src={filesUrl || previewUrl || ""}
+            className={`w-full h-full border-0 preview-iframe ${isMobile ? 'mobile-preview' : ''}`}
+            title="Preview"
+            sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-same-origin allow-scripts allow-top-navigation-by-user-activation"
+            allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; usb; xr-spatial-tracking"
+            loading="lazy"
+          />
+        </div>
         
         <ShareDialog 
           open={showShareDialog}

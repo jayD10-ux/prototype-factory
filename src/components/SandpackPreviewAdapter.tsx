@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from "react";
-import { SandpackPreview } from "./SandpackPreview";
 import { useClerkAuth } from "@/lib/clerk-provider";
 import { FeedbackUser } from "@/types/feedback";
+import { SandpackPreview } from "./SandpackPreview";
 
 interface SandpackPreviewAdapterProps {
   prototypeId: string;
@@ -45,17 +45,6 @@ export const SandpackPreviewAdapter = ({
   }, [user]);
 
   return (
-    <SandpackPreview
-      prototypeId={prototypeId}
-      files={files}
-      activeFile={activeFile}
-      readOnly={readOnly}
-      feedbackUser={feedbackUser}
-      enableFeedback={enableFeedback && isAuthenticated}
-      showFeedback={showFeedback}
-      onRuntimeError={onRuntimeError}
-      iframeSrc={iframeSrc}
-      autorun={autorun}
-    />
+    <SandpackPreview />
   );
 };
