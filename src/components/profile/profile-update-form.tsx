@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useSupabase } from "@/lib/supabase-provider";
+import { useClerkAuth } from "@/lib/clerk-provider";
 import {
   Form,
   FormControl,
@@ -34,6 +35,7 @@ interface ProfileUpdateFormProps {
 
 export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
   const { session } = useSupabase();
+  const { user: clerkUser } = useClerkAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -48,41 +50,65 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
     },
   });
 
-  // Fixed: Changed useState to useEffect with proper dependency array
+  // Get user ID from either Supabase or Clerk
+  const userId = session?.user?.id || clerkUser?.id;
+  const isClerkId = typeof userId === 'string' && userId?.startsWith('user_');
+
   useEffect(() => {
     const loadProfile = async () => {
-      if (!session?.user) return;
+      if (!userId) return;
       
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('name, role, bio, avatar_url')
-          .eq('id', session.user.id)
-          .single();
-          
-        if (error) throw error;
+        let profileData;
         
-        if (data) {
+        if (isClerkId) {
+          // For Clerk IDs
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('name, role, bio, avatar_url, clerk_id')
+            .eq('clerk_id', userId)
+            .maybeSingle();
+            
+          if (error && error.code !== 'PGRST116') throw error;
+          profileData = data;
+        } else {
+          // For Supabase UUIDs
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('name, role, bio, avatar_url')
+            .eq('id', userId)
+            .maybeSingle();
+            
+          if (error && error.code !== 'PGRST116') throw error;
+          profileData = data;
+        }
+        
+        if (profileData) {
           form.reset({
-            name: data.name || "",
-            role: data.role || "",
-            bio: data.bio || "",
+            name: profileData.name || "",
+            role: profileData.role || "",
+            bio: profileData.bio || "",
           });
           
-          if (data.avatar_url) {
-            setAvatarUrl(data.avatar_url);
+          if (profileData.avatar_url) {
+            setAvatarUrl(profileData.avatar_url);
           }
         }
       } catch (error) {
         console.error('Error loading profile:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile data. Please refresh the page.",
+          variant: "destructive",
+        });
       }
     };
     
     loadProfile();
-  }, [session, form]);
+  }, [userId, form, toast, isClerkId]);
 
   const onSubmit = async (values: ProfileFormValues) => {
-    if (!session?.user?.id) {
+    if (!userId) {
       toast({
         title: "Error",
         description: "You must be logged in to update your profile",
@@ -99,7 +125,7 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
       // Upload avatar if provided
       if (avatarFile) {
         const fileExt = avatarFile.name.split('.').pop();
-        const filePath = `${session.user.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${userId}/${Math.random().toString(36).substring(2)}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from('avatars')
@@ -112,17 +138,34 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
         avatarPath = data.publicUrl;
       }
 
-      // Update the profile
-      const { error } = await supabase.from('profiles').upsert({
-        id: session.user.id,
-        name: values.name,
-        role: values.role,
-        bio: values.bio,
-        avatar_url: avatarPath || avatarUrl,
-        updated_at: new Date().toISOString(),
-      });
+      // Update or create the profile based on the ID type
+      if (isClerkId) {
+        // For Clerk users, we use clerk_id field
+        const { error } = await supabase.from('profiles').upsert({
+          clerk_id: userId,
+          name: values.name,
+          role: values.role,
+          bio: values.bio,
+          avatar_url: avatarPath || avatarUrl,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'clerk_id'
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        // For Supabase users, we use id field
+        const { error } = await supabase.from('profiles').upsert({
+          id: userId,
+          name: values.name,
+          role: values.role,
+          bio: values.bio,
+          avatar_url: avatarPath || avatarUrl,
+          updated_at: new Date().toISOString(),
+        });
+
+        if (error) throw error;
+      }
 
       toast({
         title: "Profile Updated",

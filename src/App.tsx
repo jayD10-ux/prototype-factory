@@ -121,7 +121,7 @@ const AppRoutes = () => {
     return {
       user: {
         id: user.id,
-        email: user.primaryEmail,
+        email: user.email, // Fixed: Use email instead of primaryEmail
         app_metadata: {},
         user_metadata: {},
         aud: "authenticated",
