@@ -3,6 +3,7 @@ import { NovuProvider } from "@novu/notification-center";
 import { useSupabase } from "@/lib/supabase-provider";
 import { useNavigate } from "react-router-dom";
 import React from "react";
+import { useClerkAuth } from "@/lib/clerk-provider";
 
 interface NovuNotificationProviderProps {
   children: React.ReactNode;
@@ -10,20 +11,24 @@ interface NovuNotificationProviderProps {
 
 export function NovuNotificationProvider({ children }: NovuNotificationProviderProps) {
   const { session } = useSupabase();
+  const { user } = useClerkAuth();
   const navigate = useNavigate();
   
   // Application identifier from your Novu dashboard
   const applicationIdentifier = "pGu4iA9YYPiQ"; // This is from your supabase/functions/send-notification/index.ts
   
+  // Get user ID from either Supabase session or Clerk
+  const userId = session?.user?.id || user?.id;
+  
   // Only provide Novu context if the user is logged in
-  if (!session?.user?.id) {
+  if (!userId) {
     return <>{children}</>;
   }
   
   return (
     <NovuProvider
       applicationIdentifier={applicationIdentifier}
-      subscriberId={session.user.id}
+      subscriberId={userId}
       backendUrl="https://api.novu.co"
       socketUrl="https://ws.novu.co"
       i18n="en"

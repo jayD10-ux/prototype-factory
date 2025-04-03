@@ -17,6 +17,7 @@ import { NovuNotificationProvider } from "./components/notification/novu-provide
 import SharedPrototype from './pages/SharedPrototype';
 import { SignIn, SignUp } from "@clerk/clerk-react";
 import { fixSandpackPreviewError } from "./components/SandpackPreview";
+import { SupabaseProvider } from "./lib/supabase-provider";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -96,7 +97,7 @@ import { supabase } from "./integrations/supabase/client";
 const AppRoutes = () => {
   const hasSkippedLogin = localStorage.getItem('skippedLogin') === 'true';
   const [initialized, setInitialized] = useState(false);
-  const { isAuthenticated, isLoading } = useClerkAuth();
+  const { isAuthenticated, isLoading, user } = useClerkAuth();
   
   useEffect(() => {
     setInitialized(true);
@@ -113,46 +114,67 @@ const AppRoutes = () => {
     );
   }
 
+  // Create a mock session for SupabaseProvider from Clerk user
+  const createSessionFromClerkUser = () => {
+    if (!user) return null;
+    
+    return {
+      user: {
+        id: user.id,
+        email: user.primaryEmail,
+        app_metadata: {},
+        user_metadata: {},
+        aud: "authenticated",
+        created_at: ""
+      },
+      access_token: "",
+      refresh_token: "",
+      expires_in: 3600
+    };
+  };
+
   return (
     <NavigationWrapper>
-      <Routes>
-        <Route path="/sign-in/*" element={<SignIn routing="path" path="/sign-in" />} />
-        <Route path="/sign-up/*" element={<SignUp routing="path" path="/sign-up" />} />
-        <Route
-          path="/onboarding"
-          element={
-            <ProtectedRoute skipOnboardingCheck={true}>
-              <Onboarding />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/"
-          element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/sign-in" />}
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <NovuNotificationProvider>
-                <Index />
-              </NovuNotificationProvider>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/prototype/:id"
-          element={
-            <ProtectedRoute>
-              <NovuNotificationProvider>
-                <PrototypeDetail />
-              </NovuNotificationProvider>
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/p/:id" element={<SharedPrototype />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <SupabaseProvider session={createSessionFromClerkUser()}>
+        <Routes>
+          <Route path="/sign-in/*" element={<SignIn routing="path" path="/sign-in" />} />
+          <Route path="/sign-up/*" element={<SignUp routing="path" path="/sign-up" />} />
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute skipOnboardingCheck={true}>
+                <Onboarding />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/"
+            element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/sign-in" />}
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <NovuNotificationProvider>
+                  <Index />
+                </NovuNotificationProvider>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/prototype/:id"
+            element={
+              <ProtectedRoute>
+                <NovuNotificationProvider>
+                  <PrototypeDetail />
+                </NovuNotificationProvider>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/p/:id" element={<SharedPrototype />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </SupabaseProvider>
       <Toaster />
       <Sonner />
       <EnvironmentBadge />
