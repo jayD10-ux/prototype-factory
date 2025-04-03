@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -137,29 +138,52 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
         avatarPath = data.publicUrl;
       }
 
-      // Prepare profile data with clerk_id as the primary identifier
-      const profileData = {
-        clerk_id: clerkUserId,
-        name: values.name,
-        role: values.role,
-        bio: values.bio,
-        avatar_url: avatarPath || avatarUrl,
-        updated_at: new Date().toISOString(),
-      };
-
-      console.log("Upserting profile with data:", profileData);
-
-      // Use clerk_id for the upsert matching
-      const { error } = await supabase
+      // First, check if the profile already exists
+      const { data: existingProfile } = await supabase
         .from('profiles')
-        .upsert(profileData, { 
-          onConflict: 'clerk_id',
-          ignoreDuplicates: false
-        });
+        .select('id')
+        .eq('clerk_id', clerkUserId)
+        .maybeSingle();
 
-      if (error) {
-        console.error("Error upserting profile:", error);
-        throw error;
+      // If profile already exists, update it
+      if (existingProfile?.id) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            name: values.name,
+            role: values.role,
+            bio: values.bio,
+            avatar_url: avatarPath || avatarUrl,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingProfile.id);
+
+        if (error) {
+          console.error("Error updating existing profile:", error);
+          throw error;
+        }
+      } else {
+        // If profile doesn't exist, insert a new one with a generated UUID
+        // Generate a UUID for the profile (similar to what Supabase would do)
+        const profileId = crypto.randomUUID();
+
+        const { error } = await supabase
+          .from('profiles')
+          .insert({
+            id: profileId, // Explicitly provide an ID
+            clerk_id: clerkUserId,
+            name: values.name,
+            role: values.role,
+            bio: values.bio,
+            avatar_url: avatarPath || avatarUrl,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+
+        if (error) {
+          console.error("Error inserting new profile:", error);
+          throw error;
+        }
       }
 
       console.log("Profile updated successfully");
