@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { supabase } from "@/integrations/supabase/client";
+import supabaseAuthWrapper from "@/integrations/supabase/auth-wrapper";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Check, AlertTriangle } from "lucide-react";
@@ -145,7 +146,7 @@ export function AddPrototypeDialog({ open, onOpenChange }: AddPrototypeDialogPro
     setUploadStep("Getting session...");
     
     try {
-      const { data } = await supabase.auth.getSession();
+      const { data } = await supabaseAuthWrapper.getSession();
       console.log('Auth Session:', { 
         hasSession: !!data.session,
         userId: data.session?.user?.id,

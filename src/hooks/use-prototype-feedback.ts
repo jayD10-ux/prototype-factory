@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "./use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import supabaseAuthWrapper from "@/integrations/supabase/auth-wrapper";
 import { Json } from "@/integrations/supabase/types";
 import { useSupabase } from "@/lib/supabase-provider";
 
@@ -205,7 +206,7 @@ export function usePrototypeFeedback(prototypeId: string) {
     try {
       setIsAddingReaction(true);
       
-      const { data: sessionData } = await supabase.auth.getSession();
+      const { data: sessionData } = await supabaseAuthWrapper.getSession();
       const userId = sessionData.session?.user?.id;
 
       if (!userId) {
@@ -300,7 +301,7 @@ export function usePrototypeFeedback(prototypeId: string) {
 
   const toggleReaction = async (feedbackId: string, reactionType: string) => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
+      const { data: sessionData } = await supabaseAuthWrapper.getSession();
       if (!sessionData?.session?.user?.id) {
         throw new Error("User not authenticated");
       }

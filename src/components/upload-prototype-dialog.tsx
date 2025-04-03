@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { UploadCloud, Plus } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
+import supabaseAuthWrapper from "@/integrations/supabase/auth-wrapper";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { validatePrototypeZip } from '../utils/zip-utils';
@@ -62,7 +63,7 @@ export function UploadPrototypeDialog({
 
       const {
         data
-      } = await supabase.auth.getSession();
+      } = await supabaseAuthWrapper.getSession();
       if (!data.session?.user) {
         toast({
           title: "Error",

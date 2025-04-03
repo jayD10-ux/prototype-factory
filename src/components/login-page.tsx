@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import supabaseAuthWrapper from "@/integrations/supabase/auth-wrapper";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -27,7 +26,7 @@ const LoginPage = () => {
     
     // Check if the user is already logged in
     const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
+      const { data } = await supabaseAuthWrapper.getSession();
       if (data.session) {
         handleAfterLogin();
       }
@@ -51,7 +50,7 @@ const LoginPage = () => {
   const handleDemoLogin = async () => {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabaseAuthWrapper.signInWithPassword({
         email: "demo@example.com",
         password: "demo123",
       });
@@ -73,7 +72,7 @@ const LoginPage = () => {
     e.preventDefault();
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabaseAuthWrapper.signInWithPassword({
         email,
         password,
       });
@@ -97,7 +96,7 @@ const LoginPage = () => {
       const redirectAfterLogin = localStorage.getItem('redirectAfterLogin');
       const redirectTo = redirectAfterLogin || `${window.location.origin}/dashboard`;
       
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabaseAuthWrapper.signInWithOAuth({
         provider: "github",
         options: {
           redirectTo

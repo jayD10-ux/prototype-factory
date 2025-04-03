@@ -35,19 +35,26 @@ export function SupabaseProvider({ children, session: initialSession }: Supabase
     
     // If Clerk user changes and is authenticated, update Supabase user info
     if (isClerkAuthenticated && clerkUser && user?.id !== clerkUser.id) {
+      // Access Clerk user properties safely
+      const clerkEmail = clerkUser.emailAddresses?.[0]?.emailAddress || '';
+      const clerkFirstName = clerkUser.firstName || '';
+      const clerkLastName = clerkUser.lastName || '';
+      const clerkAvatarUrl = clerkUser.imageUrl || '';
+      const clerkCreatedAt = clerkUser.createdAt ? new Date(clerkUser.createdAt).toISOString() : new Date().toISOString();
+      
       setUser({
         ...user,
         id: clerkUser.id,
-        email: clerkUser.primaryEmailAddress?.emailAddress || '',
+        email: clerkEmail,
         app_metadata: {
           provider: 'clerk'
         },
         user_metadata: {
-          name: clerkUser.firstName ? `${clerkUser.firstName} ${clerkUser.lastName || ''}`.trim() : undefined,
-          avatar_url: clerkUser.imageUrl || undefined
+          name: clerkFirstName ? `${clerkFirstName} ${clerkLastName}`.trim() : undefined,
+          avatar_url: clerkAvatarUrl || undefined
         },
         aud: "authenticated",
-        created_at: clerkUser.createdAt ? clerkUser.createdAt.toString() : new Date().toISOString()
+        created_at: clerkCreatedAt
       });
     }
   }, [isClerkAuthenticated, clerkUser, user]);

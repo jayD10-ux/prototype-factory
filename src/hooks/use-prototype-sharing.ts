@@ -2,6 +2,7 @@ import { useToast } from "./use-toast";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import supabaseAuthWrapper from "@/integrations/supabase/auth-wrapper";
 import { PrototypeShare, ShareFormData, LinkShareOptions } from "@/types/prototype-sharing";
 
 export function usePrototypeSharing(prototypeId: string) {
@@ -36,7 +37,7 @@ export function usePrototypeSharing(prototypeId: string) {
     try {
       setIsCreatingShare(true);
       
-      const { data: sessionData } = await supabase.auth.getSession();
+      const { data: sessionData } = await supabaseAuthWrapper.getSession();
       const userId = sessionData?.session?.user?.id;
       
       if (!userId) {
@@ -66,7 +67,7 @@ export function usePrototypeSharing(prototypeId: string) {
           description: `Updated permissions for ${formData.email}`
         });
       } else {
-        const { data } = await supabase.auth.getSession();
+        const { data } = await supabaseAuthWrapper.getSession();
 
         const { error } = await supabase
           .from('prototype_shares' as any)
@@ -104,7 +105,7 @@ export function usePrototypeSharing(prototypeId: string) {
     try {
       setIsUpdatingShare(true);
       
-      const { data: sessionData } = await supabase.auth.getSession();
+      const { data: sessionData } = await supabaseAuthWrapper.getSession();
       const userId = sessionData?.session?.user?.id;
       
       if (!userId) {
@@ -120,7 +121,7 @@ export function usePrototypeSharing(prototypeId: string) {
 
       const typedExistingShares = existingShares as unknown as { id: string }[] | null;
       
-      const { data } = await supabase.auth.getSession();
+      const { data } = await supabaseAuthWrapper.getSession();
       
       if (typedExistingShares && typedExistingShares.length > 0) {
         const { error } = await supabase

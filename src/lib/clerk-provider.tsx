@@ -39,7 +39,7 @@ export function ClerkAuthProvider({ children }: ClerkProviderProps) {
         // Create a user object that matches the structure expected by the app
         const adaptedUser: User = {
           id: userId,
-          email: clerkUser.primaryEmailAddress?.emailAddress || '',
+          email: clerkUser.emailAddresses?.[0]?.emailAddress || '',
           app_metadata: {
             provider: 'clerk'
           },
@@ -48,7 +48,7 @@ export function ClerkAuthProvider({ children }: ClerkProviderProps) {
             avatar_url: clerkUser.imageUrl || undefined
           },
           aud: 'authenticated',
-          created_at: clerkUser.createdAt ? clerkUser.createdAt.toString() : new Date().toISOString()
+          created_at: clerkUser.createdAt ? new Date(clerkUser.createdAt).toISOString() : new Date().toISOString()
         };
 
         // Create a session object that mimics Supabase session
@@ -77,7 +77,7 @@ export function ClerkAuthProvider({ children }: ClerkProviderProps) {
       if (clerkUser && userId) {
         const adaptedUser: User = {
           id: userId,
-          email: clerkUser.primaryEmailAddress?.emailAddress || '',
+          email: clerkUser.emailAddresses?.[0]?.emailAddress || '',
           app_metadata: {
             provider: 'clerk'
           },
@@ -86,7 +86,7 @@ export function ClerkAuthProvider({ children }: ClerkProviderProps) {
             avatar_url: clerkUser.imageUrl || undefined
           },
           aud: 'authenticated',
-          created_at: clerkUser.createdAt ? clerkUser.createdAt.toString() : new Date().toISOString()
+          created_at: clerkUser.createdAt ? new Date(clerkUser.createdAt).toISOString() : new Date().toISOString()
         };
 
         const adaptedSession: ClerkSession = {

@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +15,7 @@ import SharedPrototype from './pages/SharedPrototype';
 import { SignIn, SignUp } from "@clerk/clerk-react";
 import { fixSandpackPreviewError } from "./components/SandpackPreview";
 import { SupabaseProvider } from "./lib/supabase-provider";
+import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,7 +32,6 @@ interface ProtectedRouteProps {
 }
 
 const NavigationWrapper = ({ children }: { children: React.ReactNode }) => {
-  // Add error fix hook
   fixSandpackPreviewError();
   return <>{children}</>;
 };
@@ -44,7 +43,6 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
 
   useEffect(() => {
     if (!isLoading && !skipOnboardingCheck && user) {
-      // Check if user needs onboarding
       const checkProfileCompletion = async () => {
         try {
           const { data } = await supabase
@@ -76,7 +74,6 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
   }
 
   if (!isAuthenticated) {
-    // Store the current path for redirect after login
     localStorage.setItem('redirectAfterLogin', location.pathname);
     return <Navigate to="/sign-in" replace />;
   }
@@ -88,7 +85,6 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
   return children;
 };
 
-// Separate routes into its own component to fix the nesting issue
 const AppRoutes = () => {
   const { isAuthenticated, isLoading, user } = useClerkAuth();
   const [initialized, setInitialized] = useState(false);
@@ -108,7 +104,6 @@ const AppRoutes = () => {
     );
   }
 
-  // Create a session object from Clerk user
   const createSessionFromClerkUser = () => {
     if (!user) return null;
     
