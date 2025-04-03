@@ -1,9 +1,6 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { 
   Card, 
   CardContent, 
@@ -11,12 +8,10 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ProfileAvatar } from "@/components/profile/profile-avatar";
-import { useSupabase } from "@/lib/supabase-provider";
 import { ProfileUpdateForm } from "@/components/profile/profile-update-form";
+import { useSupabase } from "@/lib/supabase-provider";
 import { useClerkAuth } from "@/lib/clerk-provider";
 
 export default function Onboarding() {
@@ -42,6 +37,8 @@ export default function Onboarding() {
           throw new Error("No user ID available");
         }
         
+        console.log("Checking profile for user ID:", userId);
+        
         // Check if profile exists with this id
         const { data, error } = await supabase
           .from('profiles')
@@ -49,9 +46,12 @@ export default function Onboarding() {
           .eq('id', userId)
           .maybeSingle();
           
-        if (error && error.code !== 'PGRST116') {
+        if (error) {
+          console.error("Supabase query error:", error);
           throw error;
         }
+        
+        console.log("Profile data result:", data);
         
         // If we found a profile with a name, it's complete
         if (data?.name) {

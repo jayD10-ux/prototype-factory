@@ -52,47 +52,36 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
 
   // Get user ID from either Supabase or Clerk
   const userId = session?.user?.id || clerkUser?.id;
-  // Check if the ID is a Clerk ID (string starting with 'user_')
-  const isClerkId = typeof userId === 'string' && userId?.startsWith('user_');
 
   useEffect(() => {
     const loadProfile = async () => {
       if (!userId) return;
       
       try {
-        let profileData;
+        console.log("Loading profile for user ID:", userId);
         
-        if (isClerkId) {
-          // For Clerk IDs, we'll look up profile by clerk_id
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .maybeSingle();
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
             
-          if (error && error.code !== 'PGRST116') throw error;
-          profileData = data;
-        } else {
-          // For Supabase UUIDs, we use the standard approach
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .maybeSingle();
-            
-          if (error && error.code !== 'PGRST116') throw error;
-          profileData = data;
+        if (error) {
+          console.error("Error loading profile:", error);
+          throw error;
         }
         
-        if (profileData) {
+        console.log("Profile data loaded:", data);
+        
+        if (data) {
           form.reset({
-            name: profileData.name || "",
-            role: profileData.role || "",
-            bio: profileData.bio || "",
+            name: data.name || "",
+            role: data.role || "",
+            bio: data.bio || "",
           });
           
-          if (profileData.avatar_url) {
-            setAvatarUrl(profileData.avatar_url);
+          if (data.avatar_url) {
+            setAvatarUrl(data.avatar_url);
           }
         }
       } catch (error) {
@@ -106,7 +95,7 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
     };
     
     loadProfile();
-  }, [userId, form, toast, isClerkId]);
+  }, [userId, form, toast]);
 
   const onSubmit = async (values: ProfileFormValues) => {
     if (!userId) {
@@ -121,6 +110,8 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
     setIsLoading(true);
 
     try {
+      console.log("Submitting profile for user ID:", userId);
+      
       let avatarPath = null;
 
       // Upload avatar if provided
@@ -139,7 +130,7 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
         avatarPath = data.publicUrl;
       }
 
-      // For both Clerk and Supabase users, we'll use the user ID as the profile ID
+      // Use the user ID directly for both Clerk and Supabase users
       const { error } = await supabase.from('profiles').upsert({
         id: userId,
         name: values.name,
@@ -149,8 +140,13 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
         updated_at: new Date().toISOString(),
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error upserting profile:", error);
+        throw error;
+      }
 
+      console.log("Profile updated successfully");
+      
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated",
