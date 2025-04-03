@@ -4,14 +4,14 @@
  * https://w3c.github.io/webappsec-trusted-types/dist/spec/
  */
 
-// First, declare the module 'trusted-types'
+// Define the type in a module format for import usage
 declare module 'trusted-types' {
-  export namespace TrustedHTML {
+  namespace TrustedHTML {
     type PolicyName = string;
     type PolicyLiteral = string;
   }
 
-  export interface TrustedTypePolicyFactory {
+  interface TrustedTypePolicyFactory {
     createPolicy(
       policyName: TrustedHTML.PolicyName,
       policyOptions?: {
@@ -23,21 +23,26 @@ declare module 'trusted-types' {
     ): TrustedTypePolicy;
   }
 
-  export interface TrustedTypePolicy {
+  interface TrustedTypePolicy {
     createHTML(input: string): TrustedHTML;
     createScript(input: string): TrustedScript;
     createScriptURL(input: string): TrustedScriptURL;
     createURL?(input: string): TrustedURL;
   }
 
-  export interface TrustedHTML {}
-  export interface TrustedScript {}
-  export interface TrustedScriptURL {}
-  export interface TrustedURL {}
+  interface TrustedHTML {}
+  interface TrustedScript {}
+  interface TrustedScriptURL {}
+  interface TrustedURL {}
 }
 
-// Then, also add global declarations
+// Also declare global types for direct usage without imports
 declare global {
+  namespace TrustedHTML {
+    type PolicyName = string;
+    type PolicyLiteral = string;
+  }
+
   interface TrustedTypePolicyFactory {
     createPolicy(
       policyName: TrustedHTML.PolicyName,
@@ -68,5 +73,5 @@ declare global {
   }
 }
 
-// This empty export makes this file a module
+// This empty export is necessary to make this file a proper module
 export {};
