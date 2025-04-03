@@ -1,12 +1,12 @@
 
 import { PrototypeGrid } from "@/components/prototype-grid";
-import { useSupabase } from "@/lib/supabase-provider";
+import { useClerkAuth } from "@/lib/clerk-provider";
 import Dashboard from "@/components/dashboard";
 
 const Index = () => {
-  const { session } = useSupabase();
+  const { isLoading } = useClerkAuth();
 
-  if (!session) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">

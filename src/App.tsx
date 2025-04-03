@@ -5,17 +5,17 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { supabase } from "./integrations/supabase/client";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { PrototypeDetail } from "@/components/PrototypeDetail";
-import { SupabaseProvider } from "@/lib/supabase-provider";
+import { ClerkAuthProvider } from "@/lib/clerk-provider";
 import LoginPage from './components/login-page';
 import { EnvironmentBadge } from "./components/environment-badge";
 import Onboarding from "./pages/Onboarding";
 import { NovuNotificationProvider } from "./components/notification/novu-provider";
 import SharedPrototype from './pages/SharedPrototype';
+import { SignIn, SignUp } from "@clerk/clerk-react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,72 +36,33 @@ const NavigationWrapper = ({ children }: { children: React.ReactNode }) => {
 };
 
 const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRouteProps) => {
-  const [session, setSession] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { isAuthenticated, isLoading, user } = useClerkAuth();
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
-    const fetchSession = async () => {
-      try {
-        console.log("Fetching session in ProtectedRoute");
-        const { data } = await supabase.auth.getSession();
-        console.log("Session data:", !!data.session);
-        setSession(data.session);
-        
-        if (data.session?.user && !skipOnboardingCheck) {
-          const { data: profileData } = await supabase
+    if (!isLoading && !skipOnboardingCheck && user) {
+      // Check if user needs onboarding - we'll implement profile checks if needed
+      const checkProfileCompletion = async () => {
+        try {
+          const { data } = await supabase
             .from('profiles')
             .select('name')
-            .eq('id', data.session.user.id)
+            .eq('id', user.id)
             .single();
-            
-          setNeedsOnboarding(!profileData?.name);
+          
+          setNeedsOnboarding(!data?.name);
+        } catch (error) {
+          console.error('Error checking profile:', error);
+          setNeedsOnboarding(true);
         }
-      } catch (error) {
-        console.error('Error fetching session:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("Auth state changed in ProtectedRoute:", !!session);
-      setSession(session);
+      };
       
-      if (!session) {
-        setLoading(false);
-      } else if (!skipOnboardingCheck) {
-        const checkProfile = async () => {
-          try {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('name')
-              .eq('id', session.user.id)
-              .single();
-              
-            setNeedsOnboarding(!profileData?.name);
-            setLoading(false);
-          } catch (error) {
-            console.error('Error checking profile:', error);
-            setLoading(false);
-          }
-        };
-        
-        checkProfile();
-      } else {
-        setLoading(false);
-      }
-    });
+      checkProfileCompletion();
+    }
+  }, [isLoading, user, skipOnboardingCheck]);
 
-    return () => subscription.unsubscribe();
-  }, [skipOnboardingCheck]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
@@ -112,46 +73,33 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
     );
   }
 
-  if (!session) {
+  if (!isAuthenticated) {
     // Store the current path for redirect after login
     localStorage.setItem('redirectAfterLogin', location.pathname);
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/sign-in" replace />;
   }
 
   if (needsOnboarding && !skipOnboardingCheck) {
     return <Navigate to="/onboarding" replace />;
   }
 
-  return (
-    <SupabaseProvider session={session}>
-      {children}
-    </SupabaseProvider>
-  );
+  return children;
 };
+
+// We still need the supabase client for database operations
+import { supabase } from "./integrations/supabase/client";
+import { useClerkAuth } from "./lib/clerk-provider";
 
 const AppContent = () => {
   const hasSkippedLogin = localStorage.getItem('skippedLogin') === 'true';
   const [initialized, setInitialized] = useState(false);
-  const [initialSession, setInitialSession] = useState<any | null>(null);
+  const { isAuthenticated, isLoading } = useClerkAuth();
   
-  // Pre-fetch the session once at app load
   useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        console.log("Initial session check:", !!data.session);
-        setInitialSession(data.session);
-      } catch (error) {
-        console.error("Error initializing app:", error);
-      } finally {
-        setInitialized(true);
-      }
-    };
-    
-    initializeApp();
+    setInitialized(true);
   }, []);
   
-  if (!initialized) {
+  if (!initialized || isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
@@ -164,48 +112,51 @@ const AppContent = () => {
 
   return (
     <BrowserRouter>
-      <NavigationWrapper>
-        <Routes>
-          <Route path="/auth" element={<Auth />} />
-          <Route
-            path="/onboarding"
-            element={
-              <ProtectedRoute skipOnboardingCheck={true}>
-                <Onboarding />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/"
-            element={initialSession ? <Navigate to="/dashboard" /> : <LoginPage />}
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <NovuNotificationProvider>
-                  <Index />
-                </NovuNotificationProvider>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/prototype/:id"
-            element={
-              <ProtectedRoute>
-                <NovuNotificationProvider>
-                  <PrototypeDetail />
-                </NovuNotificationProvider>
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/p/:id" element={<SharedPrototype />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
-        <Sonner />
-        <EnvironmentBadge />
-      </NavigationWrapper>
+      <ClerkAuthProvider>
+        <NavigationWrapper>
+          <Routes>
+            <Route path="/sign-in/*" element={<SignIn routing="path" path="/sign-in" />} />
+            <Route path="/sign-up/*" element={<SignUp routing="path" path="/sign-up" />} />
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute skipOnboardingCheck={true}>
+                  <Onboarding />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/"
+              element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/sign-in" />}
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <NovuNotificationProvider>
+                    <Index />
+                  </NovuNotificationProvider>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/prototype/:id"
+              element={
+                <ProtectedRoute>
+                  <NovuNotificationProvider>
+                    <PrototypeDetail />
+                  </NovuNotificationProvider>
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/p/:id" element={<SharedPrototype />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Toaster />
+          <Sonner />
+          <EnvironmentBadge />
+        </NavigationWrapper>
+      </ClerkAuthProvider>
     </BrowserRouter>
   );
 };

@@ -3,6 +3,8 @@ import React from 'react';
 import { usePrototypeFeedback, PrototypeFeedback } from '@/hooks/use-prototype-feedback';
 import { User } from '@/types/supabase';
 import { FeedbackPoint as FeedbackPointType, FeedbackUser } from '@/types/feedback';
+import { useClerkAuth } from '@/lib/clerk-provider';
+import { useUser } from '@clerk/clerk-react';
 
 // Define a FeedbackPoint type that's compatible with the one in types/feedback.ts
 export interface FeedbackPoint extends Omit<PrototypeFeedback, 'prototype_id' | 'created_by'> {
@@ -35,8 +37,10 @@ function userToFeedbackUser(user: User | null): FeedbackUser | null {
 }
 
 // This adapter maps our feedback hook to the expected interface for SandpackPreview
-export function useFeedbackAdapter(prototypeId: string, currentUser?: User | null) {
+export function useFeedbackAdapter(prototypeId: string) {
   const feedback = usePrototypeFeedback(prototypeId);
+  const { user: currentUser } = useClerkAuth();
+  const { user: clerkUser } = useUser();
   
   // Convert our feedback items to the format expected by SandpackPreview
   const feedbackPoints = React.useMemo(() => {

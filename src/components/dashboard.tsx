@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { UploadPrototypeDialog } from "@/components/upload-prototype-dialog";
-import { useSupabase } from "@/lib/supabase-provider";
+import { useClerkAuth } from "@/lib/clerk-provider";
 import { PrototypeGrid } from "./prototype-grid";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,7 +11,7 @@ import { Plus } from "lucide-react";
 
 const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const { supabase, session } = useSupabase();
+  const { user } = useClerkAuth();
   const queryClient = useQueryClient();
 
   return (

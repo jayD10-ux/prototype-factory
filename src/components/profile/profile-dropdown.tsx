@@ -1,3 +1,4 @@
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,49 +8,25 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useSupabase } from "@/lib/supabase-provider"
+import { useClerkAuth } from "@/lib/clerk-provider"
 import { useNavigate } from "react-router-dom"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { LogOut } from "lucide-react"
+import { useUser, useClerk } from "@clerk/clerk-react"
 
 export function ProfileDropdown() {
-  const { supabase, session } = useSupabase()
+  const { user } = useClerkAuth()
+  const { user: clerkUser } = useUser()
+  const { signOut } = useClerk()
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
-  const [profileName, setProfileName] = useState<string | null>(null);
-  const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (session?.user) {
-        try {
-          const { data: profileData, error } = await supabase
-            .from('profiles')
-            .select('name, avatar_url')
-            .eq('id', session.user.id)
-            .single();
-
-          if (error) {
-            console.error('Error fetching profile:', error);
-          } else {
-            setProfileName(profileData?.name || null);
-            setProfileAvatar(profileData?.avatar_url || null);
-          }
-        } catch (error) {
-          console.error('Error fetching profile:', error);
-        }
-      }
-    };
-
-    fetchProfile();
-  }, [session, supabase]);
 
   const handleSignOut = async () => {
     try {
       setIsLoading(true);
-      await supabase.auth.signOut();
-      navigate("/auth");
+      await signOut();
+      navigate("/sign-in");
     } catch (error) {
       console.error("Error signing out:", error);
     } finally {
@@ -57,13 +34,19 @@ export function ProfileDropdown() {
     }
   };
 
+  const profileName = clerkUser?.firstName ? 
+    `${clerkUser.firstName} ${clerkUser.lastName || ''}`.trim() : 
+    user?.email?.split('@')[0] || 'Guest';
+    
+  const profileAvatar = clerkUser?.imageUrl || user?.user_metadata?.avatar_url;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="h-8 w-8 p-0 rounded-full">
           <Avatar className="h-8 w-8">
             {profileAvatar ? (
-              <AvatarImage src={profileAvatar} alt={profileName || "User Avatar"} />
+              <AvatarImage src={profileAvatar} alt={profileName} />
             ) : (
               <AvatarFallback>{profileName?.slice(0, 2).toUpperCase() || "US"}</AvatarFallback>
             )}
@@ -73,9 +56,9 @@ export function ProfileDropdown() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{profileName || "Guest"}</p>
+            <p className="text-sm font-medium leading-none">{profileName}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {session?.user?.email}
+              {clerkUser?.primaryEmailAddress?.emailAddress || user?.email}
             </p>
           </div>
         </DropdownMenuLabel>
