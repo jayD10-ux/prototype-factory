@@ -598,6 +598,28 @@ export type Database = {
         }
         Returns: Json
       }
+      get_current_clerk_user: {
+        Args: {
+          _table_clerk_id: string
+        }
+        Returns: boolean
+      }
+      get_current_user_clerk_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_profile_id_by_clerk_id: {
+        Args: {
+          _clerk_id: string
+        }
+        Returns: string
+      }
+      is_same_user_by_clerk_id: {
+        Args: {
+          _clerk_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

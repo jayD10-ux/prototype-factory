@@ -18,7 +18,6 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
-  const [profileComplete, setProfileComplete] = useState(false);
   
   useEffect(() => {
     const checkProfileCompletion = async () => {
@@ -36,7 +35,7 @@ export default function Onboarding() {
         
         console.log("Checking profile for Clerk ID:", clerkId);
         
-        // Try to find profile using clerk_id
+        // Try to find profile using clerk_id - we've updated our DB to properly index this
         const { data, error } = await supabase
           .from('profiles')
           .select('name')
@@ -52,7 +51,6 @@ export default function Onboarding() {
         
         // If we found a profile with a name, it's complete
         if (data?.name) {
-          setProfileComplete(true);
           navigate('/dashboard');
         }
       } catch (error) {

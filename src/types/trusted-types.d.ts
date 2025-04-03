@@ -4,9 +4,6 @@
  * https://w3c.github.io/webappsec-trusted-types/dist/spec/
  */
 
-// Use triple-slash directive to reference the DOM lib explicitly
-/// <reference lib="dom" />
-
 // Define the global trusted types interface
 declare global {
   interface TrustedTypePolicyFactory {

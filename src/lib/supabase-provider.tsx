@@ -1,7 +1,7 @@
 
 'use client';
 
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Session, User } from '@/types/supabase';
 import { useClerkAuth } from './clerk-provider';
@@ -27,12 +27,30 @@ export function SupabaseProvider({ children, session: initialSession }: Supabase
   const [user, setUser] = useState<User | null>(initialSession?.user || null);
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(!!initialSession?.user);
-  const { isAuthenticated: isClerkAuthenticated } = useClerkAuth();
+  const { isAuthenticated: isClerkAuthenticated, user: clerkUser } = useClerkAuth();
 
   // Update authentication state based on Clerk
-  useState(() => {
+  useEffect(() => {
     setIsAuthenticated(isClerkAuthenticated);
-  }, [isClerkAuthenticated]);
+    
+    // If Clerk user changes and is authenticated, update Supabase user info
+    if (isClerkAuthenticated && clerkUser && user?.id !== clerkUser.id) {
+      setUser({
+        ...user,
+        id: clerkUser.id,
+        email: clerkUser.primaryEmailAddress?.emailAddress || '',
+        app_metadata: {
+          provider: 'clerk'
+        },
+        user_metadata: {
+          name: clerkUser.firstName ? `${clerkUser.firstName} ${clerkUser.lastName || ''}`.trim() : undefined,
+          avatar_url: clerkUser.imageUrl || undefined
+        },
+        aud: "authenticated",
+        created_at: clerkUser.createdAt ? clerkUser.createdAt.toString() : new Date().toISOString()
+      });
+    }
+  }, [isClerkAuthenticated, clerkUser, user]);
 
   // Simple function to refresh session if needed
   const refreshSession = async () => {
@@ -54,7 +72,7 @@ export function SupabaseProvider({ children, session: initialSession }: Supabase
     user,
     supabase,
     isLoading,
-    isAuthenticated: isClerkAuthenticated, // Use Clerk's auth state
+    isAuthenticated, // Use updated state that reflects Clerk's auth state
     refreshSession,
   };
 
