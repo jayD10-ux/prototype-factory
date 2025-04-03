@@ -4,59 +4,56 @@
  * https://w3c.github.io/webappsec-trusted-types/dist/spec/
  */
 
-declare module 'trusted-types' {
-  export interface TrustedHTML {}
-  export interface TrustedScript {}
-  export interface TrustedScriptURL {}
-  export interface TrustedURL {}
+// Define the interfaces first, then use them in both module and global declarations
+interface ITrustedHTML {}
+interface ITrustedScript {}
+interface ITrustedScriptURL {}
+interface ITrustedURL {}
 
-  export interface TrustedTypePolicy {
-    createHTML(input: string): TrustedHTML;
-    createScript(input: string): TrustedScript;
-    createScriptURL(input: string): TrustedScriptURL;
-    createURL?(input: string): TrustedURL;
-  }
-
-  export interface TrustedTypePolicyFactory {
-    createPolicy(
-      policyName: string,
-      policyOptions?: {
-        createHTML?: (input: string) => string;
-        createScript?: (input: string) => string;
-        createScriptURL?: (input: string) => string;
-        createURL?: (input: string) => string;
-      }
-    ): TrustedTypePolicy;
-  }
+interface ITrustedTypePolicy {
+  createHTML(input: string): ITrustedHTML;
+  createScript(input: string): ITrustedScript;
+  createScriptURL(input: string): ITrustedScriptURL;
+  createURL?(input: string): ITrustedURL;
 }
 
-// Also define global interfaces for ambient usage
+interface ITrustedTypePolicyFactory {
+  createPolicy(
+    policyName: string,
+    policyOptions?: {
+      createHTML?: (input: string) => string;
+      createScript?: (input: string) => string;
+      createScriptURL?: (input: string) => string;
+      createURL?: (input: string) => string;
+    }
+  ): ITrustedTypePolicy;
+}
+
+// Module declaration
+declare module 'trusted-types' {
+  export type TrustedHTML = ITrustedHTML;
+  export type TrustedScript = ITrustedScript;
+  export type TrustedScriptURL = ITrustedScriptURL;
+  export type TrustedURL = ITrustedURL;
+
+  export type TrustedTypePolicy = ITrustedTypePolicy;
+  export type TrustedTypePolicyFactory = ITrustedTypePolicyFactory;
+}
+
+// Global declarations
 declare global {
-  interface TrustedHTML {}
-  interface TrustedScript {}
-  interface TrustedScriptURL {}
-  interface TrustedURL {}
+  type TrustedHTML = ITrustedHTML;
+  type TrustedScript = ITrustedScript;
+  type TrustedScriptURL = ITrustedScriptURL;
+  type TrustedURL = ITrustedURL;
 
-  interface TrustedTypePolicy {
-    createHTML(input: string): TrustedHTML;
-    createScript(input: string): TrustedScript;
-    createScriptURL(input: string): TrustedScriptURL;
-    createURL?(input: string): TrustedURL;
-  }
-
-  interface TrustedTypePolicyFactory {
-    createPolicy(
-      policyName: string,
-      policyOptions?: {
-        createHTML?: (input: string) => string;
-        createScript?: (input: string) => string;
-        createScriptURL?: (input: string) => string;
-        createURL?: (input: string) => string;
-      }
-    ): TrustedTypePolicy;
-  }
+  type TrustedTypePolicy = ITrustedTypePolicy;
+  type TrustedTypePolicyFactory = ITrustedTypePolicyFactory;
 
   interface Window {
     trustedTypes?: TrustedTypePolicyFactory;
   }
 }
+
+// This empty export makes this file a proper module
+export {};
