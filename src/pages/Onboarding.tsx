@@ -11,12 +11,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileUpdateForm } from "@/components/profile/profile-update-form";
-import { useSupabase } from "@/lib/supabase-provider";
 import { useClerkAuth } from "@/lib/clerk-provider";
 
 export default function Onboarding() {
-  const { session } = useSupabase();
-  const { user: clerkUser } = useClerkAuth();
+  const { user: clerkUser, isAuthenticated } = useClerkAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
@@ -24,32 +22,26 @@ export default function Onboarding() {
   
   useEffect(() => {
     const checkProfileCompletion = async () => {
-      if (!session?.user && !clerkUser) {
+      if (!isAuthenticated || !clerkUser) {
         navigate('/sign-in');
         return;
       }
 
       try {
-        // Get the user ID - either from Supabase or Clerk
-        const userId = session?.user?.id;
         const clerkId = clerkUser?.id;
         
-        if (!userId && !clerkId) {
+        if (!clerkId) {
           throw new Error("No user ID available");
         }
         
-        console.log("Checking profile - Supabase ID:", userId, "Clerk ID:", clerkId);
+        console.log("Checking profile for Clerk ID:", clerkId);
         
-        // Try to find profile using the appropriate ID
-        let query = supabase.from('profiles').select('name');
-        
-        if (userId) {
-          query = query.eq('id', userId);
-        } else if (clerkId) {
-          query = query.eq('clerk_id', clerkId);
-        }
-        
-        const { data, error } = await query.maybeSingle();
+        // Try to find profile using clerk_id
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('clerk_id', clerkId)
+          .maybeSingle();
           
         if (error) {
           console.error("Supabase query error:", error);
@@ -76,7 +68,7 @@ export default function Onboarding() {
     };
 
     checkProfileCompletion();
-  }, [session, clerkUser, navigate, toast]);
+  }, [clerkUser, isAuthenticated, navigate, toast]);
 
   if (isLoading) {
     return (

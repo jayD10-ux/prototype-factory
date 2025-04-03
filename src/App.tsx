@@ -6,11 +6,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { PrototypeDetail } from "@/components/PrototypeDetail";
 import { ClerkAuthProvider, useClerkAuth } from "@/lib/clerk-provider";
-import LoginPage from './components/login-page';
 import { EnvironmentBadge } from "./components/environment-badge";
 import Onboarding from "./pages/Onboarding";
 import { NovuNotificationProvider } from "./components/notification/novu-provider";
@@ -18,7 +16,6 @@ import SharedPrototype from './pages/SharedPrototype';
 import { SignIn, SignUp } from "@clerk/clerk-react";
 import { fixSandpackPreviewError } from "./components/SandpackPreview";
 import { SupabaseProvider } from "./lib/supabase-provider";
-import { supabase } from "./integrations/supabase/client";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,7 +47,6 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
       // Check if user needs onboarding
       const checkProfileCompletion = async () => {
         try {
-          // Check by clerk_id if it's a Clerk user
           const { data } = await supabase
             .from('profiles')
             .select('name')
@@ -94,9 +90,8 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
 
 // Separate routes into its own component to fix the nesting issue
 const AppRoutes = () => {
-  const hasSkippedLogin = localStorage.getItem('skippedLogin') === 'true';
-  const [initialized, setInitialized] = useState(false);
   const { isAuthenticated, isLoading, user } = useClerkAuth();
+  const [initialized, setInitialized] = useState(false);
   
   useEffect(() => {
     setInitialized(true);

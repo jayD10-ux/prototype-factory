@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -8,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useSupabase } from "@/lib/supabase-provider";
 import { useClerkAuth } from "@/lib/clerk-provider";
 import {
   Form,
@@ -34,7 +32,6 @@ interface ProfileUpdateFormProps {
 }
 
 export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
-  const { session } = useSupabase();
   const { user: clerkUser } = useClerkAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -50,26 +47,21 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
     },
   });
 
-  // Get user ID from either Supabase or Clerk
-  const supabaseUserId = session?.user?.id;
+  // Get Clerk user ID
   const clerkUserId = clerkUser?.id;
 
   useEffect(() => {
     const loadProfile = async () => {
-      if (!supabaseUserId && !clerkUserId) return;
+      if (!clerkUserId) return;
       
       try {
-        console.log("Loading profile - Supabase ID:", supabaseUserId, "Clerk ID:", clerkUserId);
+        console.log("Loading profile for Clerk ID:", clerkUserId);
         
-        let query = supabase.from('profiles').select('*');
-        
-        if (supabaseUserId) {
-          query = query.eq('id', supabaseUserId);
-        } else if (clerkUserId) {
-          query = query.eq('clerk_id', clerkUserId);
-        }
-        
-        const { data, error } = await query.maybeSingle();
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('clerk_id', clerkUserId)
+          .maybeSingle();
             
         if (error) {
           console.error("Error loading profile:", error);
@@ -100,10 +92,10 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
     };
     
     loadProfile();
-  }, [supabaseUserId, clerkUserId, form, toast]);
+  }, [clerkUserId, form, toast]);
 
   const onSubmit = async (values: ProfileFormValues) => {
-    if (!supabaseUserId && !clerkUserId) {
+    if (!clerkUserId) {
       toast({
         title: "Error",
         description: "You must be logged in to update your profile",
@@ -115,16 +107,15 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
     setIsLoading(true);
 
     try {
-      console.log("Submitting profile - Supabase ID:", supabaseUserId, "Clerk ID:", clerkUserId);
+      console.log("Submitting profile for Clerk ID:", clerkUserId);
       
       let avatarPath = null;
 
       // Upload avatar if provided
       if (avatarFile) {
-        // Generate unique file path with either ID
-        const userId = supabaseUserId || clerkUserId;
+        // Generate unique file path
         const fileExt = avatarFile.name.split('.').pop();
-        const filePath = `${userId}/${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${clerkUserId}/${Math.random().toString(36).substring(2)}.${fileExt}`;
 
         // Create storage bucket if it doesn't exist
         const { data: bucketList } = await supabase.storage.listBuckets();
@@ -146,8 +137,9 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
         avatarPath = data.publicUrl;
       }
 
-      // Prepare profile data
-      const profileData: any = {
+      // Prepare profile data with clerk_id as the primary identifier
+      const profileData = {
+        clerk_id: clerkUserId,
         name: values.name,
         role: values.role,
         bio: values.bio,
@@ -155,25 +147,15 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
         updated_at: new Date().toISOString(),
       };
 
-      // Handle different user ID types
-      if (supabaseUserId) {
-        profileData.id = supabaseUserId;
-      } else if (clerkUserId) {
-        // For Clerk users, we use clerk_id field
-        profileData.clerk_id = clerkUserId;
-        
-        // We also need an id field to satisfy the foreign key constraint
-        // The trigger we created will handle the auth.users entry
-        if (!supabaseUserId) {
-          // Generate a UUID for the Supabase ID
-          const { data: uuidData } = await supabase.rpc('gen_random_uuid');
-          profileData.id = uuidData;
-        }
-      }
-
       console.log("Upserting profile with data:", profileData);
 
-      const { error } = await supabase.from('profiles').upsert(profileData);
+      // Use clerk_id for the upsert matching
+      const { error } = await supabase
+        .from('profiles')
+        .upsert(profileData, { 
+          onConflict: 'clerk_id',
+          ignoreDuplicates: false
+        });
 
       if (error) {
         console.error("Error upserting profile:", error);
