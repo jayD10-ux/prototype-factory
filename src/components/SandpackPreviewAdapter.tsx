@@ -1,91 +1,61 @@
 
-import React from 'react';
-import { usePrototypeFeedback, PrototypeFeedback } from '@/hooks/use-prototype-feedback';
-import { User } from '@/types/supabase';
-import { FeedbackPoint as FeedbackPointType, FeedbackUser } from '@/types/feedback';
-import { useClerkAuth } from '@/lib/clerk-provider';
-import { useUser } from '@clerk/clerk-react';
+import { useState, useEffect } from "react";
+import { SandpackPreview } from "./SandpackPreview";
+import { useClerkAuth } from "@/lib/clerk-provider";
+import { FeedbackUser } from "@/types/feedback";
 
-// Define a FeedbackPoint type that's compatible with the one in types/feedback.ts
-export interface FeedbackPoint extends Omit<PrototypeFeedback, 'prototype_id' | 'created_by'> {
-  prototype_id: string;
-  created_by: string;
-  // Include all other required fields from the FeedbackPointType
-  id: string;
-  content: string;
-  position: {
-    x: number;
-    y: number;
-    width?: number;
-    height?: number;
-  };
-  created_at: string;
-  updated_at: string | null;
-  status: string;
+interface SandpackPreviewAdapterProps {
+  prototypeId: string;
+  files: Record<string, string>;
+  activeFile?: string;
+  readOnly?: boolean;
+  enableFeedback?: boolean;
+  showFeedback?: boolean;
+  onRuntimeError?: (error: Error) => void;
+  iframeSrc?: string;
+  autorun?: boolean;
 }
 
-// Helper function to convert User to FeedbackUser
-function userToFeedbackUser(user: User | null): FeedbackUser | null {
-  if (!user) return null;
-  
-  return {
-    id: user.id,
-    name: user.user_metadata?.name || user.email?.split('@')[0] || 'Anonymous',
-    email: user.email || null,
-    avatar_url: user.user_metadata?.avatar_url || null
-  };
-}
+export const SandpackPreviewAdapter = ({
+  prototypeId,
+  files,
+  activeFile,
+  readOnly = true,
+  enableFeedback = false,
+  showFeedback = false,
+  onRuntimeError,
+  iframeSrc,
+  autorun = true,
+}: SandpackPreviewAdapterProps) => {
+  const { user, isAuthenticated } = useClerkAuth();
+  const [feedbackUser, setFeedbackUser] = useState<FeedbackUser | null>(null);
 
-// This adapter maps our feedback hook to the expected interface for SandpackPreview
-export function useFeedbackAdapter(prototypeId: string) {
-  const feedback = usePrototypeFeedback(prototypeId);
-  const { user: currentUser } = useClerkAuth();
-  const { user: clerkUser } = useUser();
-  
-  // Convert our feedback items to the format expected by SandpackPreview
-  const feedbackPoints = React.useMemo(() => {
-    return (feedback.feedbackItems || []).map(item => ({
-      ...item,
-      prototype_id: item.prototype_id || prototypeId, // Ensure prototype_id is always present
-      created_by: item.created_by || (currentUser?.id || 'anonymous'), // Ensure created_by is always present
-      created_at: item.created_at || new Date().toISOString(),
-      updated_at: item.updated_at || null,
-      status: item.status || 'open'
-    })) as unknown as FeedbackPointType[];
-  }, [feedback.feedbackItems, prototypeId, currentUser]);
-  
-  // Map functions to the expected interface
-  const addFeedbackPoint = async (data: any) => {
-    return await feedback.addFeedback(data);
-  };
-  
-  const updateFeedbackPoint = async (updatedFeedback: FeedbackPoint | string, content?: string) => {
-    if (typeof updatedFeedback === 'string' && content) {
-      // Called as updateFeedbackPoint(id, content)
-      return await feedback.updateFeedback(updatedFeedback, content);
-    } else if (typeof updatedFeedback === 'object') {
-      // Called with a feedback object
-      return await feedback.updateFeedback(updatedFeedback.id, updatedFeedback.content);
+  useEffect(() => {
+    if (user) {
+      // Convert user to FeedbackUser type (making sure we follow the expected structure)
+      const feedbackUserData: FeedbackUser = {
+        id: user.id,
+        name: user.user_metadata?.name || "Anonymous",
+        avatar_url: user.user_metadata?.avatar_url || "",
+      };
+      setFeedbackUser(feedbackUserData);
+    } else {
+      setFeedbackUser(null);
     }
-    return null;
-  };
-  
-  // Convert User to FeedbackUser for the feedback component
-  const feedbackCurrentUser = currentUser ? userToFeedbackUser(currentUser) : null;
-  
-  // Mock user data if needed
-  const feedbackUsers = React.useMemo(() => {
-    // Create mock user data if needed - this would be replaced with real data
-    return {};
-  }, []);
-  
-  return {
-    ...feedback,
-    feedbackPoints,
-    isLoading: feedback.isLoadingFeedback,
-    feedbackUsers,
-    currentUser: feedbackCurrentUser,
-    addFeedbackPoint,
-    updateFeedbackPoint
-  };
-}
+  }, [user]);
+
+  return (
+    <SandpackPreview
+      prototypeId={prototypeId}
+      files={files}
+      activeFile={activeFile}
+      readOnly={readOnly}
+      feedbackUser={feedbackUser}
+      enableFeedback={enableFeedback && isAuthenticated}
+      showFeedback={showFeedback}
+      onRuntimeError={onRuntimeError}
+      iframeSrc={iframeSrc}
+      autorun={autorun}
+    />
+  );
+};

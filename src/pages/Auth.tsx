@@ -1,201 +1,37 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
+// This is now a simple redirect page since we're using Clerk's UI components
 export default function Auth() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
-  const { toast } = useToast();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check if we have a redirect path stored
     const redirectPath = localStorage.getItem('redirectAfterLogin');
     
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth state changed:", event, !!session);
-      if (session) {
-        if (event === 'SIGNED_IN' || event === 'SIGNED_UP') {
-          // If we have a stored redirect path, use it
-          if (redirectPath) {
-            localStorage.removeItem('redirectAfterLogin');
-            navigate(redirectPath, { replace: true });
-          } else if (event === 'SIGNED_UP') {
-            navigate('/onboarding', { replace: true });
-          } else {
-            navigate('/', { replace: true });
-          }
-        }
-      }
-    });
-
-    // Also check for existing session
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        // User is already logged in, redirect them
-        if (redirectPath) {
-          localStorage.removeItem('redirectAfterLogin');
-          navigate(redirectPath, { replace: true });
-        } else {
-          navigate('/', { replace: true });
-        }
-      }
-    };
-    
-    checkSession();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-            },
-          },
-        });
-        if (error) throw error;
-        toast({
-          title: "Account created!",
-          description: "Please check your email to verify your account.",
-        });
+    // Since we're now using Clerk, this page should just redirect
+    setTimeout(() => {
+      if (redirectPath) {
+        localStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath, { replace: true });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-        // Auth state change will handle redirect
+        navigate('/', { replace: true });
       }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSignIn = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'github',
-      });
-      if (error) throw error;
-      // Auth state change will handle redirect
-    } catch (error) {
-      console.error('Error signing in:', error);
-    }
-  };
+    }, 500);
+    
+    setIsLoading(false);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>{isSignUp ? "Create Account" : "Welcome Back"}</CardTitle>
-          <CardDescription>
-            {isSignUp
-              ? "Create a new account to start managing your prototypes"
-              : "Sign in to your account to continue"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignUp && (
-              <div className="space-y-2">
-                <label htmlFor="fullName" className="text-sm font-medium">
-                  Full Name
-                </label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  placeholder="John Doe"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required={isSignUp}
-                />
-              </div>
-            )}
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                Password
-              </label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading
-                ? "Loading..."
-                : isSignUp
-                ? "Create Account"
-                : "Sign In"}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full"
-              onClick={() => setIsSignUp(!isSignUp)}
-            >
-              {isSignUp
-                ? "Already have an account? Sign in"
-                : "Need an account? Sign up"}
-            </Button>
-          </form>
-          <Button
-            type="button"
-            className="w-full mt-4"
-            onClick={handleSignIn}
-          >
-            Sign in with GitHub
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="text-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-foreground mx-auto mb-4"></div>
+        <p>Redirecting to authentication page...</p>
+      </div>
     </div>
   );
 }

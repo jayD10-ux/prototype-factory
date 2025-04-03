@@ -48,7 +48,7 @@ export function ClerkAuthProvider({ children }: ClerkProviderProps) {
             avatar_url: clerkUser.imageUrl || undefined
           },
           aud: 'authenticated',
-          created_at: clerkUser.createdAt || new Date().toISOString()
+          created_at: clerkUser.createdAt ? clerkUser.createdAt.toString() : new Date().toISOString()
         };
 
         // Create a session object that mimics Supabase session
@@ -86,7 +86,7 @@ export function ClerkAuthProvider({ children }: ClerkProviderProps) {
             avatar_url: clerkUser.imageUrl || undefined
           },
           aud: 'authenticated',
-          created_at: clerkUser.createdAt || new Date().toISOString()
+          created_at: clerkUser.createdAt ? clerkUser.createdAt.toString() : new Date().toISOString()
         };
 
         const adaptedSession: ClerkSession = {

@@ -9,13 +9,14 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { PrototypeDetail } from "@/components/PrototypeDetail";
-import { ClerkAuthProvider } from "@/lib/clerk-provider";
+import { ClerkAuthProvider, useClerkAuth } from "@/lib/clerk-provider";
 import LoginPage from './components/login-page';
 import { EnvironmentBadge } from "./components/environment-badge";
 import Onboarding from "./pages/Onboarding";
 import { NovuNotificationProvider } from "./components/notification/novu-provider";
 import SharedPrototype from './pages/SharedPrototype';
 import { SignIn, SignUp } from "@clerk/clerk-react";
+import { fixSandpackPreviewError } from "./components/SandpackPreview";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,6 +33,8 @@ interface ProtectedRouteProps {
 }
 
 const NavigationWrapper = ({ children }: { children: React.ReactNode }) => {
+  // Add error fix hook
+  fixSandpackPreviewError();
   return <>{children}</>;
 };
 
@@ -88,9 +91,9 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
 
 // We still need the supabase client for database operations
 import { supabase } from "./integrations/supabase/client";
-import { useClerkAuth } from "./lib/clerk-provider";
 
-const AppContent = () => {
+// Separate routes into its own component to fix the nesting issue
+const AppRoutes = () => {
   const hasSkippedLogin = localStorage.getItem('skippedLogin') === 'true';
   const [initialized, setInitialized] = useState(false);
   const { isAuthenticated, isLoading } = useClerkAuth();
@@ -111,53 +114,49 @@ const AppContent = () => {
   }
 
   return (
-    <BrowserRouter>
-      <ClerkAuthProvider>
-        <NavigationWrapper>
-          <Routes>
-            <Route path="/sign-in/*" element={<SignIn routing="path" path="/sign-in" />} />
-            <Route path="/sign-up/*" element={<SignUp routing="path" path="/sign-up" />} />
-            <Route
-              path="/onboarding"
-              element={
-                <ProtectedRoute skipOnboardingCheck={true}>
-                  <Onboarding />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/"
-              element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/sign-in" />}
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <NovuNotificationProvider>
-                    <Index />
-                  </NovuNotificationProvider>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/prototype/:id"
-              element={
-                <ProtectedRoute>
-                  <NovuNotificationProvider>
-                    <PrototypeDetail />
-                  </NovuNotificationProvider>
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/p/:id" element={<SharedPrototype />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
-          <Sonner />
-          <EnvironmentBadge />
-        </NavigationWrapper>
-      </ClerkAuthProvider>
-    </BrowserRouter>
+    <NavigationWrapper>
+      <Routes>
+        <Route path="/sign-in/*" element={<SignIn routing="path" path="/sign-in" />} />
+        <Route path="/sign-up/*" element={<SignUp routing="path" path="/sign-up" />} />
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute skipOnboardingCheck={true}>
+              <Onboarding />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/"
+          element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/sign-in" />}
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <NovuNotificationProvider>
+                <Index />
+              </NovuNotificationProvider>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/prototype/:id"
+          element={
+            <ProtectedRoute>
+              <NovuNotificationProvider>
+                <PrototypeDetail />
+              </NovuNotificationProvider>
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/p/:id" element={<SharedPrototype />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <Toaster />
+      <Sonner />
+      <EnvironmentBadge />
+    </NavigationWrapper>
   );
 };
 
@@ -165,7 +164,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AppContent />
+        <BrowserRouter>
+          <ClerkAuthProvider>
+            <AppRoutes />
+          </ClerkAuthProvider>
+        </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
   );
