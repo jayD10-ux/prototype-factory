@@ -3,6 +3,7 @@ import { FeedbackPoint as FeedbackPointType, FeedbackUser, ElementTarget, Device
 import { FeedbackPoint } from './FeedbackPoint';
 import { FeedbackDeviceFilter } from './FeedbackDeviceFilter';
 import { CommentThread } from './CommentThread';
+import { AuthModal } from './AuthModal';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -70,6 +71,24 @@ export function FeedbackOverlay({
   const [currentHoveredElements, setCurrentHoveredElements] = useState<Element[]>([]);
   const [currentElementIndex, setCurrentElementIndex] = useState(0);
   const [selectedDeviceType, setSelectedDeviceType] = useState<DeviceType | 'all'>('all');
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      setIsAuthenticated(!!data.session);
+    };
+    
+    checkAuth();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+    
+    return () => subscription.unsubscribe();
+  }, []);
   
   const { isIframeReady, refreshCheck } = useIframeStability({
     containerSelector: '.sp-preview',
@@ -170,6 +189,12 @@ export function FeedbackOverlay({
       return;
     }
     
+    if (isAuthenticated === false) {
+      e.stopPropagation();
+      setShowAuthModal(true);
+      return;
+    }
+    
     try {
       if (currentHoveredElements.length > 0 && currentElementIndex < currentHoveredElements.length) {
         const selectedElement = currentHoveredElements[currentElementIndex];
@@ -198,7 +223,7 @@ export function FeedbackOverlay({
     } catch (error) {
       console.error('Error handling overlay click:', error);
     }
-  }, [isFeedbackMode, isIframeReady, isInteractingWithComment, currentHoveredElements, currentElementIndex, getElementPosition, scale, originalDimensions]);
+  }, [isFeedbackMode, isIframeReady, isInteractingWithComment, currentHoveredElements, currentElementIndex, getElementPosition, scale, originalDimensions, isAuthenticated]);
   
   const handleKeyDown = (e: KeyboardEvent) => {
     if (!isFeedbackMode || currentHoveredElements.length === 0) return;
@@ -250,6 +275,11 @@ export function FeedbackOverlay({
   const handleSubmitNewFeedback = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    
+    if (isAuthenticated === false) {
+      setShowAuthModal(true);
+      return;
+    }
     
     if (!newFeedbackPosition && !elementTarget) {
       toast({
@@ -390,7 +420,8 @@ export function FeedbackOverlay({
     highlightElement,
     elementTarget,
     deviceType,
-    originalDimensions
+    originalDimensions,
+    isAuthenticated
   ]);
 
   const handleUpdateFeedbackStatus = useCallback(async (status: FeedbackPointType['status'], e?: React.MouseEvent) => {
@@ -522,208 +553,215 @@ export function FeedbackOverlay({
   }
 
   return (
-    <div 
-      ref={overlayRef}
-      className={`absolute inset-0 ${isIframeReady ? 'cursor-crosshair' : 'cursor-wait'} ${isFeedbackMode ? 'pointer-events-auto' : 'pointer-events-none'}`}
-      onClick={handleOverlayClick}
-      style={{
-        transform: `scale(${scale})`,
-        transformOrigin: 'top left',
-        width: originalDimensions.width,
-        height: originalDimensions.height,
-      }}
-    >
-      {!isIframeReady && isFeedbackMode && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-10">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-        </div>
-      )}
-      
-      {isIframeReady && (
-        <div className="absolute top-1 right-40 z-50">
-          <FeedbackDeviceFilter
-            selectedDeviceType={selectedDeviceType}
-            onSelectDeviceType={setSelectedDeviceType}
-            deviceCounts={deviceCounts}
-            currentDevice={currentDeviceInfo}
-          />
-        </div>
-      )}
-      
-      {isIframeReady && (
-        <div className="absolute top-4 left-4 z-50 flex items-center gap-1 bg-background/80 py-1 px-2 rounded-md border text-xs text-muted-foreground">
-          {deviceType === 'mobile' && <Smartphone className="h-3 w-3" />}
-          {deviceType === 'tablet' && <Tablet className="h-3 w-3" />}
-          {deviceType === 'desktop' && <Monitor className="h-3 w-3" />}
-          <span>
-            {deviceType} ({originalDimensions.width}×{originalDimensions.height})
-          </span>
-        </div>
-      )}
-      
-      {isIframeReady && currentHoveredElements.length > 0 && (
-        <div className="absolute bottom-4 right-4 z-50 bg-background rounded-md shadow-md border p-2">
-          <div className="text-xs text-muted-foreground mb-1">
-            Element {currentElementIndex + 1} of {currentHoveredElements.length}
+    <>
+      <div 
+        ref={overlayRef}
+        className={`absolute inset-0 ${isIframeReady ? 'cursor-crosshair' : 'cursor-wait'} ${isFeedbackMode ? 'pointer-events-auto' : 'pointer-events-none'}`}
+        onClick={handleOverlayClick}
+        style={{
+          transform: `scale(${scale})`,
+          transformOrigin: 'top left',
+          width: originalDimensions.width,
+          height: originalDimensions.height,
+        }}
+      >
+        {!isIframeReady && isFeedbackMode && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/30 z-10">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
           </div>
-          <div className="flex gap-2">
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={selectParentElement}
-              disabled={currentElementIndex >= currentHoveredElements.length - 1}
-              className="h-8 px-2"
-            >
-              <ChevronUp className="h-4 w-4 mr-1" /> Parent
-            </Button>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={selectChildElement}
-              disabled={currentElementIndex <= 0}
-              className="h-8 px-2"
-            >
-              <ChevronDown className="h-4 w-4 mr-1" /> Child
-            </Button>
+        )}
+        
+        {isIframeReady && (
+          <div className="absolute top-1 right-40 z-50">
+            <FeedbackDeviceFilter
+              selectedDeviceType={selectedDeviceType}
+              onSelectDeviceType={setSelectedDeviceType}
+              deviceCounts={deviceCounts}
+              currentDevice={currentDeviceInfo}
+            />
           </div>
-          <div className="text-xs mt-1 text-muted-foreground">
-            {currentHoveredElements[currentElementIndex]?.tagName.toLowerCase()}
-            {currentHoveredElements[currentElementIndex]?.id ? ` #${currentHoveredElements[currentElementIndex]?.id}` : ''}
-            {currentHoveredElements[currentElementIndex]?.className ? ` .${currentHoveredElements[currentElementIndex]?.className.split(' ')[0]}` : ''}
+        )}
+        
+        {isIframeReady && (
+          <div className="absolute top-4 left-4 z-50 flex items-center gap-1 bg-background/80 py-1 px-2 rounded-md border text-xs text-muted-foreground">
+            {deviceType === 'mobile' && <Smartphone className="h-3 w-3" />}
+            {deviceType === 'tablet' && <Tablet className="h-3 w-3" />}
+            {deviceType === 'desktop' && <Monitor className="h-3 w-3" />}
+            <span>
+              {deviceType} ({originalDimensions.width}×{originalDimensions.height})
+            </span>
           </div>
-          <div className="text-[10px] mt-1 text-muted-foreground italic">
-            Use arrow keys ↑↓ to navigate elements
+        )}
+        
+        {isIframeReady && currentHoveredElements.length > 0 && (
+          <div className="absolute bottom-4 right-4 z-50 bg-background rounded-md shadow-md border p-2">
+            <div className="text-xs text-muted-foreground mb-1">
+              Element {currentElementIndex + 1} of {currentHoveredElements.length}
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={selectParentElement}
+                disabled={currentElementIndex >= currentHoveredElements.length - 1}
+                className="h-8 px-2"
+              >
+                <ChevronUp className="h-4 w-4 mr-1" /> Parent
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={selectChildElement}
+                disabled={currentElementIndex <= 0}
+                className="h-8 px-2"
+              >
+                <ChevronDown className="h-4 w-4 mr-1" /> Child
+              </Button>
+            </div>
+            <div className="text-xs mt-1 text-muted-foreground">
+              {currentHoveredElements[currentElementIndex]?.tagName.toLowerCase()}
+              {currentHoveredElements[currentElementIndex]?.id ? ` #${currentHoveredElements[currentElementIndex]?.id}` : ''}
+              {currentHoveredElements[currentElementIndex]?.className ? ` .${currentHoveredElements[currentElementIndex]?.className.split(' ')[0]}` : ''}
+            </div>
+            <div className="text-[10px] mt-1 text-muted-foreground italic">
+              Use arrow keys ↑↓ to navigate elements
+            </div>
           </div>
-        </div>
-      )}
-      
-      {isIframeReady && filteredFeedbackPoints.map(feedback => (
-        <div 
-          key={feedback.id} 
-          className="feedback-point"
-          onClick={(e) => e.stopPropagation()} 
-        >
-          <FeedbackPoint
-            feedback={feedback}
-            onClick={handleFeedbackPointClick}
-            isSelected={selectedFeedback?.id === feedback.id}
-            commentCount={0}
-            isMatchingCurrentDevice={isMatchingCurrentDevice(feedback)}
-            onMouseEnter={() => {
-              if (feedback.element_target) {
-                const element = findElementByTarget(feedback.element_target);
-                if (element) highlightElement(element);
-              }
+        )}
+        
+        {isIframeReady && filteredFeedbackPoints.map(feedback => (
+          <div 
+            key={feedback.id} 
+            className="feedback-point"
+            onClick={(e) => e.stopPropagation()} 
+          >
+            <FeedbackPoint
+              feedback={feedback}
+              onClick={handleFeedbackPointClick}
+              isSelected={selectedFeedback?.id === feedback.id}
+              commentCount={0}
+              isMatchingCurrentDevice={isMatchingCurrentDevice(feedback)}
+              onMouseEnter={() => {
+                if (feedback.element_target) {
+                  const element = findElementByTarget(feedback.element_target);
+                  if (element) highlightElement(element);
+                }
+              }}
+              onMouseLeave={() => {
+                if (!selectedFeedback || selectedFeedback.id !== feedback.id) {
+                  highlightElement(null);
+                }
+              }}
+            />
+          </div>
+        ))}
+        
+        {isIframeReady && selectedFeedback && (
+          <div 
+            className="absolute comment-thread z-40"
+            style={{
+              left: `${selectedFeedback.position.x}%`,
+              top: `${selectedFeedback.position.y}%`,
+              transform: 'translate(10px, -50%)'
             }}
-            onMouseLeave={() => {
-              if (!selectedFeedback || selectedFeedback.id !== feedback.id) {
-                highlightElement(null);
-              }
-            }}
-          />
-        </div>
-      ))}
-      
-      {isIframeReady && selectedFeedback && (
-        <div 
-          className="absolute comment-thread z-40"
-          style={{
-            left: `${selectedFeedback.position.x}%`,
-            top: `${selectedFeedback.position.y}%`,
-            transform: 'translate(10px, -50%)'
-          }}
-          onClick={(e) => e.stopPropagation()} 
-        >
-          <CommentThread
-            feedback={selectedFeedback}
-            onClose={handleCloseCommentThread}
-            onUpdateStatus={handleUpdateFeedbackStatus}
-            onAddReply={handleAddReply}
-            currentUser={currentUser}
-            creator={feedbackUsers[selectedFeedback.created_by]}
-          />
-        </div>
-      )}
-      
-      {isIframeReady && (newFeedbackPosition || (currentHoveredElements.length > 0)) && (
-        <div 
-          className="absolute feedback-form z-40"
-          style={newFeedbackPosition ? {
-            left: `${newFeedbackPosition.x}%`,
-            top: `${newFeedbackPosition.y}%`,
-            transform: 'translate(10px, -50%)'
-          } : currentHoveredElements.length > 0 ? (() => {
-              const element = currentHoveredElements[currentElementIndex];
-              const position = getElementPosition(element);
-              return position ? {
-                left: `${position.x}%`,
-                top: `${position.y}%`,
-                transform: 'translate(10px, -50%)'
-              } : {
+            onClick={(e) => e.stopPropagation()} 
+          >
+            <CommentThread
+              feedback={selectedFeedback}
+              onClose={handleCloseCommentThread}
+              onUpdateStatus={handleUpdateFeedbackStatus}
+              onAddReply={handleAddReply}
+              currentUser={currentUser}
+              creator={feedbackUsers[selectedFeedback.created_by]}
+            />
+          </div>
+        )}
+        
+        {isIframeReady && (newFeedbackPosition || (currentHoveredElements.length > 0)) && (
+          <div 
+            className="absolute feedback-form z-40"
+            style={newFeedbackPosition ? {
+              left: `${newFeedbackPosition.x}%`,
+              top: `${newFeedbackPosition.y}%`,
+              transform: 'translate(10px, -50%)'
+            } : currentHoveredElements.length > 0 ? (() => {
+                const element = currentHoveredElements[currentElementIndex];
+                const position = getElementPosition(element);
+                return position ? {
+                  left: `${position.x}%`,
+                  top: `${position.y}%`,
+                  transform: 'translate(10px, -50%)'
+                } : {
+                  left: '50%',
+                  top: '30%',
+                  transform: 'translate(-50%, -50%)'
+                };
+              })() : {
                 left: '50%',
                 top: '30%',
                 transform: 'translate(-50%, -50%)'
-              };
-            })() : {
-              left: '50%',
-              top: '30%',
-              transform: 'translate(-50%, -50%)'
+              }
             }
-          }
-          onClick={(e) => e.stopPropagation()} 
-        >
-          <Card className="w-72">
-            <CardContent className="p-3">
-              {currentHoveredElements.length > 0 && currentElementIndex < currentHoveredElements.length && (
-                <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                  <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-[10px] border border-blue-200">
-                    {currentHoveredElements[currentElementIndex]?.tagName.toLowerCase()}
-                  </span>
-                  <span className="truncate">
-                    {currentHoveredElements[currentElementIndex]?.textContent?.trim().substring(0, 20) || 'No text content'}
-                    {currentHoveredElements[currentElementIndex]?.textContent?.trim().length > 20 ? '...' : ''}
-                  </span>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-4 w-4 ml-auto" 
-                    onClick={() => {
-                      highlightElement(null);
-                      setCurrentHoveredElements([]);
-                    }}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
-              <Textarea
-                placeholder="What's your feedback?"
-                value={newFeedbackContent}
-                onChange={(e) => setNewFeedbackContent(e.target.value)}
-                className="min-h-[80px]"
-                autoFocus
-                onClick={(e) => e.stopPropagation()} 
-              />
-            </CardContent>
-            <CardFooter className="p-3 pt-0 flex justify-between">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleCancelNewFeedback}
-              >
-                Cancel
-              </Button>
-              <Button 
-                size="sm" 
-                onClick={handleSubmitNewFeedback}
-                disabled={!newFeedbackContent.trim()}
-              >
-                Submit
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-      )}
-    </div>
+            onClick={(e) => e.stopPropagation()} 
+          >
+            <Card className="w-72">
+              <CardContent className="p-3">
+                {currentHoveredElements.length > 0 && currentElementIndex < currentHoveredElements.length && (
+                  <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                    <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-[10px] border border-blue-200">
+                      {currentHoveredElements[currentElementIndex]?.tagName.toLowerCase()}
+                    </span>
+                    <span className="truncate">
+                      {currentHoveredElements[currentElementIndex]?.textContent?.trim().substring(0, 20) || 'No text content'}
+                      {currentHoveredElements[currentElementIndex]?.textContent?.trim().length > 20 ? '...' : ''}
+                    </span>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-4 w-4 ml-auto" 
+                      onClick={() => {
+                        highlightElement(null);
+                        setCurrentHoveredElements([]);
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+                <Textarea
+                  placeholder="What's your feedback?"
+                  value={newFeedbackContent}
+                  onChange={(e) => setNewFeedbackContent(e.target.value)}
+                  className="min-h-[80px]"
+                  autoFocus
+                  onClick={(e) => e.stopPropagation()} 
+                />
+              </CardContent>
+              <CardFooter className="p-3 pt-0 flex justify-between">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleCancelNewFeedback}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={handleSubmitNewFeedback}
+                  disabled={!newFeedbackContent.trim()}
+                >
+                  Submit
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        )}
+      </div>
+      
+      <AuthModal 
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
+    </>
   );
 }

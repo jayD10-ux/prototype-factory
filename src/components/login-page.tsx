@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,30 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  // Check for redirect URL in localStorage or query params
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const redirectParam = params.get('redirect');
+    
+    if (redirectParam) {
+      localStorage.setItem('redirectAfterLogin', redirectParam);
+    }
+  }, [location]);
+
+  const handleAfterLogin = () => {
+    // Check if we have a redirect URL stored
+    const redirectUrl = localStorage.getItem('redirectAfterLogin');
+    
+    if (redirectUrl) {
+      localStorage.removeItem('redirectAfterLogin');
+      navigate(redirectUrl);
+    } else {
+      navigate("/dashboard");
+    }
+  };
 
   const handleDemoLogin = async () => {
     try {
@@ -23,7 +47,7 @@ const LoginPage = () => {
       });
 
       if (error) throw error;
-      navigate("/dashboard");
+      handleAfterLogin();
     } catch (error: any) {
       toast({
         title: "Demo login failed",
@@ -45,7 +69,7 @@ const LoginPage = () => {
       });
 
       if (error) throw error;
-      navigate("/dashboard");
+      handleAfterLogin();
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -59,10 +83,14 @@ const LoginPage = () => {
 
   const handleGitHubLogin = async () => {
     try {
+      // Store the redirect URL before GitHub auth
+      const redirectAfterLogin = localStorage.getItem('redirectAfterLogin');
+      const redirectUrl = redirectAfterLogin || `${window.location.origin}/dashboard`;
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "github",
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: redirectUrl
         }
       });
       if (error) throw error;
@@ -77,7 +105,7 @@ const LoginPage = () => {
 
   const handleSkip = () => {
     localStorage.setItem("skippedLogin", "true");
-    navigate("/dashboard");
+    handleAfterLogin();
   };
 
   return (

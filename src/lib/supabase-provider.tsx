@@ -3,23 +3,22 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { User, Session } from '@/types/supabase';
 import { supabase } from '@/integrations/supabase/client';
 
 interface SupabaseContextType {
   supabase: typeof supabase;
-  session: Session | null;
+  session: any | null;
 }
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
 
 export interface SupabaseProviderProps {
   children: React.ReactNode;
-  session: Session;
+  session: any;
 }
 
 export function SupabaseProvider({ children, session: initialSession }: SupabaseProviderProps) {
-  const [session, setSession] = useState<Session | null>(initialSession);
+  const [session, setSession] = useState<any | null>(initialSession);
   const navigate = useNavigate();
 
   useEffect(() => {

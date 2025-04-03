@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useToast } from "./use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +35,29 @@ export function usePrototypeFeedback(prototypeId: string) {
   const [isAddingReaction, setIsAddingReaction] = useState(false);
   const [isUpdatingFeedback, setIsUpdatingFeedback] = useState(false);
   const [isResolvingFeedback, setIsResolvingFeedback] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  // Check authentication status when the hook is initialized
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        setIsAuthenticated(!!data.session);
+      } catch (error) {
+        console.error("Error checking authentication status:", error);
+        setIsAuthenticated(false);
+      }
+    };
+
+    checkAuth();
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const {
     data: feedbackItems,
@@ -85,6 +109,12 @@ export function usePrototypeFeedback(prototypeId: string) {
 
   const addFeedback = async (feedbackData: Omit<PrototypeFeedback, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      // Check authentication first
+      if (!isAuthenticated) {
+        // The dialog will be shown by the FeedbackOverlay component
+        return null;
+      }
+      
       setIsAddingFeedback(true);
 
       const { data: sessionData } = await supabase.auth.getSession();
@@ -96,10 +126,10 @@ export function usePrototypeFeedback(prototypeId: string) {
           description: "You must be logged in to leave feedback.",
           variant: "destructive"
         });
-        return;
+        return null;
       }
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('prototype_feedback')
         .insert([
           {
@@ -107,7 +137,9 @@ export function usePrototypeFeedback(prototypeId: string) {
             prototype_id: prototypeId,
             created_by: userId
           }
-        ]);
+        ])
+        .select()
+        .single();
 
       if (error) throw error;
 
@@ -117,6 +149,8 @@ export function usePrototypeFeedback(prototypeId: string) {
       });
 
       refetchFeedback();
+      
+      return data as PrototypeFeedback;
     } catch (error) {
       console.error("Error adding feedback:", error);
       toast({
@@ -124,6 +158,7 @@ export function usePrototypeFeedback(prototypeId: string) {
         description: "Failed to add feedback. Please try again.",
         variant: "destructive"
       });
+      return null;
     } finally {
       setIsAddingFeedback(false);
     }
@@ -321,12 +356,13 @@ export function usePrototypeFeedback(prototypeId: string) {
     isAddingReaction,
     isUpdatingFeedback,
     isResolvingFeedback,
+    isAuthenticated,
     addFeedback,
-    updateFeedback,
-    resolveFeedback,
-    addReaction,
-    removeReaction,
-    getReactions,
-    checkUserPermission
+    updateFeedback: updateFeedback,
+    resolveFeedback: resolveFeedback,
+    addReaction: addReaction,
+    removeReaction: removeReaction,
+    getReactions: getReactions,
+    checkUserPermission: checkUserPermission
   };
 }

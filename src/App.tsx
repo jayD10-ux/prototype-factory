@@ -10,7 +10,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { PrototypeDetail } from "@/components/PrototypeDetail";
 import { SupabaseProvider } from "@/lib/supabase-provider";
-import type { User, Session } from '@/types/supabase';
+import type { User } from '@/types/supabase';
 import LoginPage from './components/login-page';
 import { EnvironmentBadge } from "./components/environment-badge";
 import Onboarding from "./pages/Onboarding";
@@ -36,7 +36,7 @@ const NavigationWrapper = ({ children }: { children: React.ReactNode }) => {
 };
 
 const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRouteProps) => {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const navigate = useNavigate();
