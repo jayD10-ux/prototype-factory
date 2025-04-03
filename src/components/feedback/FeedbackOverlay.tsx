@@ -73,22 +73,7 @@ export function FeedbackOverlay({
   const [selectedDeviceType, setSelectedDeviceType] = useState<DeviceType | 'all'>('all');
   const [showAuthModal, setShowAuthModal] = useState(false);
   
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      setIsAuthenticated(!!data.session);
-    };
-    
-    checkAuth();
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session);
-    });
-    
-    return () => subscription.unsubscribe();
-  }, []);
+  const { isAuthenticated } = useSupabase();
   
   const { isIframeReady, refreshCheck } = useIframeStability({
     containerSelector: '.sp-preview',
@@ -189,7 +174,7 @@ export function FeedbackOverlay({
       return;
     }
     
-    if (isAuthenticated === false) {
+    if (!isAuthenticated) {
       e.stopPropagation();
       setShowAuthModal(true);
       return;
@@ -224,7 +209,7 @@ export function FeedbackOverlay({
       console.error('Error handling overlay click:', error);
     }
   }, [isFeedbackMode, isIframeReady, isInteractingWithComment, currentHoveredElements, currentElementIndex, getElementPosition, scale, originalDimensions, isAuthenticated]);
-  
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (!isFeedbackMode || currentHoveredElements.length === 0) return;
     
@@ -276,7 +261,7 @@ export function FeedbackOverlay({
     e.stopPropagation();
     e.preventDefault();
     
-    if (isAuthenticated === false) {
+    if (!isAuthenticated) {
       setShowAuthModal(true);
       return;
     }

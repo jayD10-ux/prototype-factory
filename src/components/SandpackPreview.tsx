@@ -22,6 +22,7 @@ import { FeedbackPoint as FeedbackPointType } from '@/types/feedback';
 import { useIframeStability } from '@/hooks/use-iframe-stability';
 import JSZip from 'jszip';
 import '@/styles/sandpack-fix.css';
+import { useSupabase } from '@/lib/supabase-provider';
 
 type DeviceType = 'desktop' | 'tablet' | 'mobile' | 'custom';
 type Orientation = 'portrait' | 'landscape';
@@ -182,6 +183,8 @@ export function SandpackPreview({ prototypeId, url, deploymentUrl, figmaUrl, fil
   const [sandpackMounted, setSandpackMounted] = useState(false);
   const { toast } = useToast();
   
+  const { user, isAuthenticated } = useSupabase();
+  
   const {
     feedbackPoints,
     isLoading: isFeedbackLoading,
@@ -189,7 +192,7 @@ export function SandpackPreview({ prototypeId, url, deploymentUrl, figmaUrl, fil
     currentUser,
     addFeedbackPoint: addFeedbackPointFromHook,
     updateFeedbackPoint: updateFeedbackPointFromHook
-  } = useFeedbackAdapter(prototypeId);
+  } = useFeedbackAdapter(prototypeId, user);
 
   const addFeedbackPoint = useCallback((feedback: FeedbackPointType) => {
     addFeedbackPointFromHook(feedback);
@@ -399,16 +402,14 @@ if (typeof window.menuitemfn === 'undefined') {
   }, [isFeedbackMode, isPreviewable, activeFile, toast]);
 
   const handleToggleFeedbackMode = useCallback(() => {
-    if (!isFeedbackMode && !currentUser) {
+    if (!isFeedbackMode && !isAuthenticated) {
+      setIsFeedbackMode(true);
       toast({
         title: "Authentication required",
         description: "You need to be logged in to leave feedback.",
         variant: "destructive"
       });
-      return;
-    }
-    
-    if (!isFeedbackMode && viewMode !== 'preview') {
+    } else if (!isFeedbackMode && viewMode !== 'preview') {
       handleViewModeChange('preview');
       setTimeout(() => {
         setIsFeedbackMode(true);
@@ -416,7 +417,7 @@ if (typeof window.menuitemfn === 'undefined') {
     } else {
       setIsFeedbackMode(!isFeedbackMode);
     }
-  }, [isFeedbackMode, currentUser, viewMode, handleViewModeChange, toast]);
+  }, [isFeedbackMode, isAuthenticated, viewMode, handleViewModeChange, toast]);
 
   const handleToggleUI = useCallback(() => {
     setShowUI(!showUI);

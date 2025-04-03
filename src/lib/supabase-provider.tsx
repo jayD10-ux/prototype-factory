@@ -11,6 +11,7 @@ interface SupabaseContextType {
   session: Session | null;
   user: User | null;
   isLoading: boolean;
+  isAuthenticated: boolean;
 }
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
@@ -24,12 +25,14 @@ export function SupabaseProvider({ children, session: initialSession }: Supabase
   const [session, setSession] = useState<Session | null>(initialSession);
   const [user, setUser] = useState<User | null>(initialSession?.user || null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!initialSession?.user);
   const navigate = useNavigate();
 
   // Initialize session state
   useEffect(() => {
     setSession(initialSession);
     setUser(initialSession?.user || null);
+    setIsAuthenticated(!!initialSession?.user);
     setIsLoading(false);
   }, [initialSession]);
 
@@ -43,6 +46,7 @@ export function SupabaseProvider({ children, session: initialSession }: Supabase
       // Update the session and user state
       setSession(newSession);
       setUser(newSession?.user || null);
+      setIsAuthenticated(!!newSession?.user);
       
       // Only redirect to auth if explicitly signed out
       // This prevents unwanted redirects when session is just being refreshed
@@ -57,6 +61,7 @@ export function SupabaseProvider({ children, session: initialSession }: Supabase
         const { data } = await supabase.auth.getSession();
         setSession(data.session);
         setUser(data.session?.user || null);
+        setIsAuthenticated(!!data.session?.user);
         setIsLoading(false);
       } catch (error) {
         console.error('Error refreshing session:', error);
@@ -77,6 +82,7 @@ export function SupabaseProvider({ children, session: initialSession }: Supabase
     user,
     supabase,
     isLoading,
+    isAuthenticated,
   };
 
   return (

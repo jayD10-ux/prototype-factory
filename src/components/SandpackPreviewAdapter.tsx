@@ -2,7 +2,7 @@
 import React from 'react';
 import { usePrototypeFeedback, PrototypeFeedback } from '@/hooks/use-prototype-feedback';
 import { User } from '@/types/supabase';
-import { FeedbackPoint as FeedbackPointType } from '@/types/feedback';
+import { FeedbackPoint as FeedbackPointType, FeedbackUser } from '@/types/feedback';
 
 // Define a FeedbackPoint type that's compatible with the one in types/feedback.ts
 export interface FeedbackPoint extends Omit<PrototypeFeedback, 'prototype_id' | 'created_by'> {
@@ -20,6 +20,18 @@ export interface FeedbackPoint extends Omit<PrototypeFeedback, 'prototype_id' | 
   created_at: string;
   updated_at: string | null;
   status: string;
+}
+
+// Helper function to convert User to FeedbackUser
+function userToFeedbackUser(user: User | null): FeedbackUser | null {
+  if (!user) return null;
+  
+  return {
+    id: user.id,
+    name: user.user_metadata?.name || 'Anonymous',
+    email: user.email || null,
+    avatar_url: user.user_metadata?.avatar_url || null
+  };
 }
 
 // This adapter maps our feedback hook to the expected interface for SandpackPreview
@@ -54,6 +66,9 @@ export function useFeedbackAdapter(prototypeId: string, currentUser?: User | nul
     return null;
   };
   
+  // Convert User to FeedbackUser for the feedback component
+  const feedbackCurrentUser = currentUser ? userToFeedbackUser(currentUser) : null;
+  
   // Mock user data if needed
   const feedbackUsers = React.useMemo(() => {
     // Create mock user data if needed - this would be replaced with real data
@@ -65,7 +80,7 @@ export function useFeedbackAdapter(prototypeId: string, currentUser?: User | nul
     feedbackPoints,
     isLoading: feedback.isLoadingFeedback,
     feedbackUsers,
-    currentUser,
+    currentUser: feedbackCurrentUser,
     addFeedbackPoint,
     updateFeedbackPoint
   };
