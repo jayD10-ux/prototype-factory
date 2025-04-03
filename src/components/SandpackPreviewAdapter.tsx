@@ -28,7 +28,7 @@ function userToFeedbackUser(user: User | null): FeedbackUser | null {
   
   return {
     id: user.id,
-    name: user.user_metadata?.name || 'Anonymous',
+    name: user.user_metadata?.name || user.email?.split('@')[0] || 'Anonymous',
     email: user.email || null,
     avatar_url: user.user_metadata?.avatar_url || null
   };

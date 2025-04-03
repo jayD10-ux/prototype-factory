@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -22,15 +23,41 @@ export default function Auth() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check if we have a redirect path stored
+    const redirectPath = localStorage.getItem('redirectAfterLogin');
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state changed:", event, !!session);
       if (session) {
-        if (event.toString() === 'SIGNED_UP') {
-          navigate('/onboarding', { replace: true });
+        if (event === 'SIGNED_IN' || event === 'SIGNED_UP') {
+          // If we have a stored redirect path, use it
+          if (redirectPath) {
+            localStorage.removeItem('redirectAfterLogin');
+            navigate(redirectPath, { replace: true });
+          } else if (event === 'SIGNED_UP') {
+            navigate('/onboarding', { replace: true });
+          } else {
+            navigate('/', { replace: true });
+          }
+        }
+      }
+    });
+
+    // Also check for existing session
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        // User is already logged in, redirect them
+        if (redirectPath) {
+          localStorage.removeItem('redirectAfterLogin');
+          navigate(redirectPath, { replace: true });
         } else {
           navigate('/', { replace: true });
         }
       }
-    });
+    };
+    
+    checkSession();
 
     return () => {
       subscription.unsubscribe();
@@ -63,6 +90,7 @@ export default function Auth() {
           password,
         });
         if (error) throw error;
+        // Auth state change will handle redirect
       }
     } catch (error: any) {
       toast({
@@ -81,6 +109,7 @@ export default function Auth() {
         provider: 'github',
       });
       if (error) throw error;
+      // Auth state change will handle redirect
     } catch (error) {
       console.error('Error signing in:', error);
     }

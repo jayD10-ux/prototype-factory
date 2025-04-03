@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -13,14 +13,14 @@ interface AuthModalProps {
 
 export function AuthModal({ isOpen, onClose, redirectPath }: AuthModalProps) {
   const navigate = useNavigate();
-  const { user } = useSupabase();
+  const { isAuthenticated, user } = useSupabase();
 
   // If user is already authenticated, just close the modal
-  React.useEffect(() => {
-    if (user && isOpen) {
+  useEffect(() => {
+    if (isAuthenticated && isOpen) {
       onClose();
     }
-  }, [user, isOpen, onClose]);
+  }, [isAuthenticated, isOpen, onClose]);
 
   const handleLogin = () => {
     // Store the current URL or custom path to redirect back after login

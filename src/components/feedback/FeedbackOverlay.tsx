@@ -13,6 +13,7 @@ import { useIframeStability } from '@/hooks/use-iframe-stability';
 import { useElementTargeting } from '@/hooks/use-element-targeting';
 import { Crosshair, X, ChevronUp, ChevronDown, Smartphone, Tablet, Monitor } from 'lucide-react';
 import { safelyConvertElementMetadata, safelyConvertDeviceInfo } from '@/utils/feedback-utils';
+import { useSupabase } from '@/lib/supabase-provider';
 
 interface FeedbackOverlayProps {
   prototypeId: string;
@@ -63,6 +64,7 @@ export function FeedbackOverlay({
   originalDimensions = { width: 1920, height: 1080 }
 }: FeedbackOverlayProps) {
   const { toast } = useToast();
+  const { isAuthenticated } = useSupabase();
   const overlayRef = useRef<HTMLDivElement>(null);
   const [newFeedbackPosition, setNewFeedbackPosition] = useState<{ x: number, y: number } | null>(null);
   const [newFeedbackContent, setNewFeedbackContent] = useState('');
@@ -72,8 +74,6 @@ export function FeedbackOverlay({
   const [currentElementIndex, setCurrentElementIndex] = useState(0);
   const [selectedDeviceType, setSelectedDeviceType] = useState<DeviceType | 'all'>('all');
   const [showAuthModal, setShowAuthModal] = useState(false);
-  
-  const { isAuthenticated } = useSupabase();
   
   const { isIframeReady, refreshCheck } = useIframeStability({
     containerSelector: '.sp-preview',

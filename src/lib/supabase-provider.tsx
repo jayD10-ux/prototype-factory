@@ -12,6 +12,7 @@ interface SupabaseContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  refreshSession: () => Promise<void>;
 }
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
@@ -27,6 +28,22 @@ export function SupabaseProvider({ children, session: initialSession }: Supabase
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(!!initialSession?.user);
   const navigate = useNavigate();
+
+  // Function to manually refresh the session
+  const refreshSession = async () => {
+    try {
+      setIsLoading(true);
+      const { data } = await supabase.auth.getSession();
+      console.log('Session refreshed manually:', !!data.session);
+      setSession(data.session);
+      setUser(data.session?.user || null);
+      setIsAuthenticated(!!data.session?.user);
+    } catch (error) {
+      console.error('Error refreshing session:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Initialize session state
   useEffect(() => {
@@ -56,9 +73,10 @@ export function SupabaseProvider({ children, session: initialSession }: Supabase
     });
 
     // Get current session to initialize state correctly
-    const refreshSession = async () => {
+    const initialRefreshSession = async () => {
       try {
         const { data } = await supabase.auth.getSession();
+        console.log('Initial session check:', !!data.session);
         setSession(data.session);
         setUser(data.session?.user || null);
         setIsAuthenticated(!!data.session?.user);
@@ -69,7 +87,7 @@ export function SupabaseProvider({ children, session: initialSession }: Supabase
       }
     };
     
-    refreshSession();
+    initialRefreshSession();
 
     return () => {
       subscription.unsubscribe();
@@ -83,6 +101,7 @@ export function SupabaseProvider({ children, session: initialSession }: Supabase
     supabase,
     isLoading,
     isAuthenticated,
+    refreshSession,
   };
 
   return (
