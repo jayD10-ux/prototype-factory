@@ -1,8 +1,9 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "./integrations/supabase/client";
 import Index from "./pages/Index";
@@ -10,7 +11,6 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { PrototypeDetail } from "@/components/PrototypeDetail";
 import { SupabaseProvider } from "@/lib/supabase-provider";
-import type { User } from '@/types/supabase';
 import LoginPage from './components/login-page';
 import { EnvironmentBadge } from "./components/environment-badge";
 import Onboarding from "./pages/Onboarding";
@@ -39,12 +39,14 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
   const [session, setSession] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
-  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const fetchSession = async () => {
       try {
+        console.log("Fetching session in ProtectedRoute");
         const { data } = await supabase.auth.getSession();
+        console.log("Session data:", !!data.session);
         setSession(data.session);
         
         if (data.session?.user && !skipOnboardingCheck) {
@@ -68,6 +70,7 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("Auth state changed in ProtectedRoute:", !!session);
       setSession(session);
       
       if (!session) {
@@ -96,7 +99,7 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
     });
 
     return () => subscription.unsubscribe();
-  }, [skipOnboardingCheck, navigate]);
+  }, [skipOnboardingCheck]);
 
   if (loading) {
     return (
@@ -110,6 +113,8 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
   }
 
   if (!session) {
+    // Store the current path for redirect after login
+    localStorage.setItem('redirectAfterLogin', location.pathname);
     return <Navigate to="/auth" replace />;
   }
 
@@ -126,6 +131,36 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
 
 const AppContent = () => {
   const hasSkippedLogin = localStorage.getItem('skippedLogin') === 'true';
+  const [initialized, setInitialized] = useState(false);
+  const [initialSession, setInitialSession] = useState<any | null>(null);
+  
+  // Pre-fetch the session once at app load
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        console.log("Initial session check:", !!data.session);
+        setInitialSession(data.session);
+      } catch (error) {
+        console.error("Error initializing app:", error);
+      } finally {
+        setInitialized(true);
+      }
+    };
+    
+    initializeApp();
+  }, []);
+  
+  if (!initialized) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-foreground"></div>
+          <p className="text-sm text-muted-foreground">Initializing application...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <BrowserRouter>
@@ -142,7 +177,7 @@ const AppContent = () => {
           />
           <Route
             path="/"
-            element={hasSkippedLogin ? <Navigate to="/dashboard" /> : <LoginPage />}
+            element={initialSession ? <Navigate to="/dashboard" /> : <LoginPage />}
           />
           <Route
             path="/dashboard"

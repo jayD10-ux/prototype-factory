@@ -7,15 +7,16 @@ import { useNavigate } from "react-router-dom";
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  redirectPath?: string;
 }
 
-export function AuthModal({ isOpen, onClose }: AuthModalProps) {
+export function AuthModal({ isOpen, onClose, redirectPath }: AuthModalProps) {
   const navigate = useNavigate();
 
   const handleLogin = () => {
-    // Store the current URL to redirect back after login
-    const currentPath = window.location.pathname;
-    localStorage.setItem('redirectAfterLogin', currentPath);
+    // Store the current URL or custom path to redirect back after login
+    const redirectTo = redirectPath || window.location.pathname;
+    localStorage.setItem('redirectAfterLogin', redirectTo);
     navigate('/auth');
     onClose();
   };

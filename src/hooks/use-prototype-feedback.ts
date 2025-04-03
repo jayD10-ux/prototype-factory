@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "./use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Json } from "@/integrations/supabase/types";
+import { useSupabase } from "@/lib/supabase-provider";
 
 export interface PrototypeFeedback {
   id: string;
@@ -35,29 +35,9 @@ export function usePrototypeFeedback(prototypeId: string) {
   const [isAddingReaction, setIsAddingReaction] = useState(false);
   const [isUpdatingFeedback, setIsUpdatingFeedback] = useState(false);
   const [isResolvingFeedback, setIsResolvingFeedback] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const { session, user } = useSupabase();
 
-  // Check authentication status when the hook is initialized
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        setIsAuthenticated(!!data.session);
-      } catch (error) {
-        console.error("Error checking authentication status:", error);
-        setIsAuthenticated(false);
-      }
-    };
-
-    checkAuth();
-
-    // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const isAuthenticated = !!session && !!user;
 
   const {
     data: feedbackItems,
@@ -83,12 +63,11 @@ export function usePrototypeFeedback(prototypeId: string) {
 
   const checkUserPermission = async (prototypeId: string): Promise<boolean> => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session) {
+      if (!session?.user) {
         return false;
       }
 
-      const userId = sessionData.session.user.id;
+      const userId = session.user.id;
 
       const { data: prototypeData } = await supabase
         .from('prototypes')
@@ -109,17 +88,15 @@ export function usePrototypeFeedback(prototypeId: string) {
 
   const addFeedback = async (feedbackData: Omit<PrototypeFeedback, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      // Check authentication first
       if (!isAuthenticated) {
-        // The dialog will be shown by the FeedbackOverlay component
+        console.log("User not authenticated, cannot add feedback");
         return null;
       }
       
       setIsAddingFeedback(true);
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData.session?.user.id;
-
+      const userId = session?.user?.id;
+      
       if (!userId) {
         toast({
           title: "Error",
@@ -128,6 +105,8 @@ export function usePrototypeFeedback(prototypeId: string) {
         });
         return null;
       }
+
+      console.log("Adding feedback with user ID:", userId);
 
       const { data, error } = await supabase
         .from('prototype_feedback')

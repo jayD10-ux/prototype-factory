@@ -32,4 +32,12 @@ export interface Session {
   user: User;
 }
 
+// For the feedback system, define a type for user profile data
+export interface FeedbackUser {
+  id: string;
+  name: string | null;
+  email?: string | null;
+  avatar_url?: string | null;
+}
+
 export type TypedSupabaseClient = SupabaseClient;

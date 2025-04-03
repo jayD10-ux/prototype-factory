@@ -24,6 +24,16 @@ const LoginPage = () => {
     if (redirectParam) {
       localStorage.setItem('redirectAfterLogin', redirectParam);
     }
+    
+    // Check if the user is already logged in
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        handleAfterLogin();
+      }
+    };
+    
+    checkSession();
   }, [location]);
 
   const handleAfterLogin = () => {
@@ -85,12 +95,12 @@ const LoginPage = () => {
     try {
       // Store the redirect URL before GitHub auth
       const redirectAfterLogin = localStorage.getItem('redirectAfterLogin');
-      const redirectUrl = redirectAfterLogin || `${window.location.origin}/dashboard`;
+      const redirectTo = redirectAfterLogin || `${window.location.origin}/dashboard`;
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "github",
         options: {
-          redirectTo: redirectUrl
+          redirectTo
         }
       });
       if (error) throw error;
