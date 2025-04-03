@@ -18,6 +18,7 @@ import SharedPrototype from './pages/SharedPrototype';
 import { SignIn, SignUp } from "@clerk/clerk-react";
 import { fixSandpackPreviewError } from "./components/SandpackPreview";
 import { SupabaseProvider } from "./lib/supabase-provider";
+import { supabase } from "./integrations/supabase/client";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,7 +47,7 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
 
   useEffect(() => {
     if (!isLoading && !skipOnboardingCheck && user) {
-      // Check if user needs onboarding - we'll implement profile checks if needed
+      // Check if user needs onboarding
       const checkProfileCompletion = async () => {
         try {
           const { data } = await supabase
@@ -90,9 +91,6 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
   return children;
 };
 
-// We still need the supabase client for database operations
-import { supabase } from "./integrations/supabase/client";
-
 // Separate routes into its own component to fix the nesting issue
 const AppRoutes = () => {
   const hasSkippedLogin = localStorage.getItem('skippedLogin') === 'true';
@@ -114,14 +112,14 @@ const AppRoutes = () => {
     );
   }
 
-  // Create a mock session for SupabaseProvider from Clerk user
+  // Create a session object from Clerk user
   const createSessionFromClerkUser = () => {
     if (!user) return null;
     
     return {
       user: {
         id: user.id,
-        email: user.email, // Fixed: Use email instead of primaryEmail
+        email: user.email,
         app_metadata: {},
         user_metadata: {},
         aud: "authenticated",

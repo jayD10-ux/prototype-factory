@@ -42,42 +42,19 @@ export default function Onboarding() {
           throw new Error("No user ID available");
         }
         
-        // Check if this is a Clerk ID (string format) or Supabase ID (UUID format)
-        const isClerkId = typeof userId === 'string' && userId.startsWith('user_');
-        
-        let profileData = null;
-        
-        if (isClerkId) {
-          // For Clerk IDs, we need to query differently since they're not UUIDs
-          // First check if a profile exists with this clerk_id
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('name')
-            .eq('clerk_id', userId)
-            .maybeSingle();
-            
-          if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" which is fine
-            throw error;
-          }
+        // Check if profile exists with this id
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', userId)
+          .maybeSingle();
           
-          profileData = data;
-        } else {
-          // For Supabase IDs (UUID format), query normally
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('name')
-            .eq('id', userId)
-            .maybeSingle();
-            
-          if (error && error.code !== 'PGRST116') {
-            throw error;
-          }
-          
-          profileData = data;
+        if (error && error.code !== 'PGRST116') {
+          throw error;
         }
         
         // If we found a profile with a name, it's complete
-        if (profileData?.name) {
+        if (data?.name) {
           setProfileComplete(true);
           navigate('/dashboard');
         }

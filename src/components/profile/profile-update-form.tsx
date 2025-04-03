@@ -52,6 +52,7 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
 
   // Get user ID from either Supabase or Clerk
   const userId = session?.user?.id || clerkUser?.id;
+  // Check if the ID is a Clerk ID (string starting with 'user_')
   const isClerkId = typeof userId === 'string' && userId?.startsWith('user_');
 
   useEffect(() => {
@@ -62,20 +63,20 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
         let profileData;
         
         if (isClerkId) {
-          // For Clerk IDs
+          // For Clerk IDs, we'll look up profile by clerk_id
           const { data, error } = await supabase
             .from('profiles')
-            .select('name, role, bio, avatar_url, clerk_id')
-            .eq('clerk_id', userId)
+            .select('*')
+            .eq('id', userId)
             .maybeSingle();
             
           if (error && error.code !== 'PGRST116') throw error;
           profileData = data;
         } else {
-          // For Supabase UUIDs
+          // For Supabase UUIDs, we use the standard approach
           const { data, error } = await supabase
             .from('profiles')
-            .select('name, role, bio, avatar_url')
+            .select('*')
             .eq('id', userId)
             .maybeSingle();
             
@@ -138,34 +139,17 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
         avatarPath = data.publicUrl;
       }
 
-      // Update or create the profile based on the ID type
-      if (isClerkId) {
-        // For Clerk users, we use clerk_id field
-        const { error } = await supabase.from('profiles').upsert({
-          clerk_id: userId,
-          name: values.name,
-          role: values.role,
-          bio: values.bio,
-          avatar_url: avatarPath || avatarUrl,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'clerk_id'
-        });
+      // For both Clerk and Supabase users, we'll use the user ID as the profile ID
+      const { error } = await supabase.from('profiles').upsert({
+        id: userId,
+        name: values.name,
+        role: values.role,
+        bio: values.bio,
+        avatar_url: avatarPath || avatarUrl,
+        updated_at: new Date().toISOString(),
+      });
 
-        if (error) throw error;
-      } else {
-        // For Supabase users, we use id field
-        const { error } = await supabase.from('profiles').upsert({
-          id: userId,
-          name: values.name,
-          role: values.role,
-          bio: values.bio,
-          avatar_url: avatarPath || avatarUrl,
-          updated_at: new Date().toISOString(),
-        });
-
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       toast({
         title: "Profile Updated",
