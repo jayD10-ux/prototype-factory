@@ -2,30 +2,18 @@
 import { NotificationBell, PopoverNotificationCenter } from "@novu/notification-center";
 import { useNavigate } from "react-router-dom";
 import { useClerkAuth } from "@/lib/clerk-provider";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 
 export function NovuNotificationBell() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useClerkAuth();
+  const { isAuthenticated, isLoaded } = useClerkAuth();
   const [error, setError] = useState<Error | null>(null);
+  const [isNovuReady, setIsNovuReady] = useState(false);
   
-  // Handle potential Novu errors at the component level
-  useEffect(() => {
-    // Setup a global error handler for Novu-related errors
-    const handleError = (event: ErrorEvent) => {
-      // Only capture errors that seem related to notifications
-      if (event.message.includes('notification') || event.message.includes('Novu') || 
-          event.message.includes('unseenCount')) {
-        console.error("Notification system error:", event.error);
-        setError(event.error || new Error(event.message));
-        // Prevent default error handling
-        event.preventDefault();
-      }
-    };
-    
-    window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
-  }, []);
+  // Don't render anything until auth is loaded
+  if (!isLoaded) {
+    return null;
+  }
   
   // If not authenticated, show an empty notification bell
   if (!isAuthenticated) {
@@ -41,39 +29,88 @@ export function NovuNotificationBell() {
   // We wrap the actual component in a try-catch to handle any rendering errors
   try {
     return (
-      <PopoverNotificationCenter 
-        colorScheme="light"
-        onNotificationClick={(notification) => {
-          try {
-            // Handle notification click - navigate or perform actions
-            if (notification?.cta?.data?.url) {
-              navigate(notification.cta.data.url);
+      <ErrorBoundaryWrapper fallback={<NotificationBell unseenCount={0} />}>
+        <PopoverNotificationCenter 
+          colorScheme="light"
+          onNotificationClick={(notification) => {
+            try {
+              // Handle notification click - navigate or perform actions
+              if (notification?.cta?.data?.url) {
+                navigate(notification.cta.data.url);
+              }
+            } catch (err) {
+              console.error("Error handling notification click:", err);
             }
-          } catch (err) {
-            console.error("Error handling notification click:", err);
-          }
-          return false; // Don't trigger the default behavior
-        }}
-      >
-        {(props) => {
-          try {
-            // Fixed: Handle null props gracefully
-            if (!props) {
+            return false; // Don't trigger the default behavior
+          }}
+        >
+          {/* Crucial change: the render prop must handle null/undefined safely */}
+          {(renderProps) => {
+            try {
+              // If renderProps is null/undefined, return a default bell
+              if (!renderProps) {
+                console.log("Novu renderProps is null, using default bell");
+                return <NotificationBell unseenCount={0} />;
+              }
+              
+              // Extract unseenCount safely with proper fallback
+              const unseenCount = 
+                typeof renderProps === 'object' && 
+                renderProps !== null && 
+                'unseenCount' in renderProps && 
+                typeof renderProps.unseenCount === 'number' 
+                  ? renderProps.unseenCount 
+                  : 0;
+              
+              return <NotificationBell unseenCount={unseenCount} />;
+            } catch (err) {
+              console.error("Error rendering notification bell:", err);
+              // Return a safe fallback
               return <NotificationBell unseenCount={0} />;
             }
-            // Fixed: Explicitly check for undefined unseenCount
-            const unseenCount = typeof props.unseenCount === 'number' ? props.unseenCount : 0;
-            return <NotificationBell unseenCount={unseenCount} />;
-          } catch (err) {
-            console.error("Error rendering notification bell:", err);
-            return <NotificationBell unseenCount={0} />;
-          }
-        }}
-      </PopoverNotificationCenter>
+          }}
+        </PopoverNotificationCenter>
+      </ErrorBoundaryWrapper>
     );
   } catch (error) {
     console.error("Error rendering notification center:", error);
     setError(error as Error);
     return <NotificationBell unseenCount={0} />;
   }
+}
+
+// Simple error boundary component to catch and handle errors
+// This prevents errors in the notification component from crashing the app
+function ErrorBoundaryWrapper({ 
+  children, 
+  fallback = <div>Error loading component</div> 
+}: { 
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}) {
+  const [hasError, setHasError] = useState(false);
+  
+  useEffect(() => {
+    // Setup error handler
+    const errorHandler = (event: ErrorEvent) => {
+      // Only capture Novu-related errors
+      if (event.message.includes('notification') || 
+          event.message.includes('Novu') || 
+          event.message.includes('unseenCount') ||
+          event.message.includes('PopoverNotificationCenter')) {
+        console.error('Captured notification error:', event.error);
+        setHasError(true);
+        event.preventDefault(); // Prevent default handling
+      }
+    };
+    
+    window.addEventListener('error', errorHandler);
+    return () => window.removeEventListener('error', errorHandler);
+  }, []);
+  
+  if (hasError) {
+    return <>{fallback}</>;
+  }
+  
+  return <>{children}</>;
 }
