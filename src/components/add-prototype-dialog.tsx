@@ -42,7 +42,6 @@ export function AddPrototypeDialog({
           <TabsContent value="upload" className="mt-0">
             <UploadPrototypeDialog
               onUpload={() => onOpenChange(false)}
-              embedded={true}
             />
           </TabsContent>
           <TabsContent value="figma" className="mt-0">

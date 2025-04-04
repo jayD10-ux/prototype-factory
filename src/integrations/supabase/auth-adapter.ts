@@ -29,8 +29,8 @@ export function useSupabaseAuth() {
         return;
       }
 
-      // Use the token with Supabase client's auth.setSession method
-      const { data, error: sessionError } = await supabase.auth.getSession();
+      // Use the token with Supabase client
+      const { error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
 
       // Check if window.Clerk exists for integrations
