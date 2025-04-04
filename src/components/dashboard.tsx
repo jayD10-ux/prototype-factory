@@ -1,42 +1,56 @@
 
-import { useState } from "react";
-import { UploadPrototypeDialog } from "@/components/upload-prototype-dialog";
-import { useClerkAuth } from "@/lib/clerk-provider";
-import { PrototypeGrid } from "./prototype-grid";
-import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
-import { NotificationBell } from "./notification/notification-bell";
+// Adding navigation link to the validation test page
+import { PrototypeGrid } from "@/components/prototype-grid";
 import { ProfileDropdown } from "./profile/profile-dropdown";
-import { Plus } from "lucide-react";
+import { NotificationBell } from "./notification/notification-bell";
+import { Link } from "react-router-dom";
+import { Button } from "./ui/button";
+import { useClerkAuth } from "@/lib/clerk-provider";
 
-const Dashboard = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const { user } = useClerkAuth();
-  const queryClient = useQueryClient();
+export default function Dashboard() {
+  const { isAuthenticated } = useClerkAuth();
 
   return (
-    <div className="container py-10">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Your Prototypes</h1>
-          <p className="text-muted-foreground">
-            Manage and showcase your interactive prototypes.
-          </p>
+    <>
+      <header className="w-full p-4 backdrop-blur-lg backdrop-saturate-150 bg-white/75 border-b z-10 sticky top-0 flex justify-between items-center">
+        <div className="container mx-auto flex justify-between">
+          <div className="flex items-center gap-4">
+            <Link to="/" className="font-semibold text-lg">
+              Prototype App
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-2 md:gap-4">
+            <Link to="/validation">
+              <Button variant="outline" size="sm">
+                Validation Tests
+              </Button>
+            </Link>
+            {isAuthenticated && (
+              <>
+                <NotificationBell />
+                <ProfileDropdown />
+              </>
+            )}
+          </div>
         </div>
-        <div className="flex gap-4 items-center">
-          <NotificationBell />
-          <ProfileDropdown />
-          <UploadPrototypeDialog
-            onUpload={() => {
-              queryClient.invalidateQueries({ queryKey: ["prototypes"] });
-            }}
-          />
-        </div>
+      </header>
+
+      <div className="flex-1">
+        <PrototypeGrid />
       </div>
 
-      <PrototypeGrid />
-    </div>
+      {/* Add a nice footer with validation link */}
+      <footer className="bg-background py-6 border-t">
+        <div className="container mx-auto text-center">
+          <p className="text-muted-foreground text-sm">
+            Authentication migration validation tools available at the{" "}
+            <Link to="/validation" className="text-primary underline">
+              validation page
+            </Link>
+          </p>
+        </div>
+      </footer>
+    </>
   );
-};
-
-export default Dashboard;
+}

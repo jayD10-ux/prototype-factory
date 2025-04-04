@@ -1,355 +1,244 @@
 
-import { useState, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useSupabase } from "@/lib/supabase-provider";
-import { useClerkAuth } from "@/lib/clerk-provider";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useCallback, useEffect } from 'react';
+import { useSupabase } from '@/lib/supabase-provider';
+import { useToast } from '@/hooks/use-toast';
+import { PrototypeShare, ShareFormData, LinkShareOptions } from '@/types/prototype-sharing';
 
-export function usePrototypeSharing() {
-  const [isLoading, setIsLoading] = useState(false);
+export function usePrototypeSharing(prototypeId: string) {
   const { supabase, clerkId } = useSupabase();
-  const { user } = useClerkAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [shares, setShares] = useState<PrototypeShare[]>([]);
+  const [isLoadingShares, setIsLoadingShares] = useState(false);
+  const [isCreatingShare, setIsCreatingShare] = useState(false);
+  const [isUpdatingShare, setIsUpdatingShare] = useState(false);
+  const [isDeletingShare, setIsDeletingShare] = useState(false);
 
-  const sharePrototype = useCallback(
-    async (prototypeId: string, email: string, permission: "view" | "comment" = "view") => {
-      if (!user?.id) {
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to share prototypes",
-          variant: "destructive",
-        });
-        return null;
-      }
+  // Fetch all shares for this prototype
+  const fetchShares = useCallback(async () => {
+    if (!prototypeId) return;
+    
+    setIsLoadingShares(true);
+    try {
+      const { data, error } = await supabase
+        .from('prototype_shares')
+        .select('*')
+        .eq('prototype_id', prototypeId);
+        
+      if (error) throw error;
+      
+      // Cast the data to the correct type
+      setShares(data as unknown as PrototypeShare[]);
+    } catch (error) {
+      console.error('Error fetching prototype shares:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load sharing settings',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoadingShares(false);
+    }
+  }, [prototypeId, supabase, toast]);
 
-      setIsLoading(true);
-      try {
-        // Check if the prototype exists and the user has permission to share it
-        const { data: prototype, error: prototypeError } = await supabase
-          .from("prototypes")
-          .select("id, name, created_by, clerk_id")
-          .eq("id", prototypeId)
-          .single();
+  // Get link share (if exists)
+  const getLinkShare = useCallback(() => {
+    return shares.find(share => share.is_link_share);
+  }, [shares]);
 
-        if (prototypeError) throw prototypeError;
+  // Get email shares
+  const getEmailShares = useCallback(() => {
+    return shares.filter(share => !share.is_link_share);
+  }, [shares]);
 
-        // Only the creator can share the prototype
-        if (prototype.clerk_id !== user.id) {
-          throw new Error("You don't have permission to share this prototype");
-        }
-
-        // Check if this email is already shared with
-        const { data: existingShare, error: existingShareError } = await supabase
-          .from("prototype_shares")
-          .select("id")
-          .eq("prototype_id", prototypeId)
-          .eq("email", email.toLowerCase())
-          .maybeSingle();
-
-        if (existingShareError) throw existingShareError;
-
-        if (existingShare) {
-          // Update existing share
-          const { error: updateError } = await supabase
-            .from("prototype_shares")
-            .update({
-              permission,
-              accessed_at: null, // Reset accessed_at
-            })
-            .eq("id", existingShare.id);
-
-          if (updateError) throw updateError;
-        } else {
-          // Create new share
-          const { error: shareError } = await supabase
-            .from("prototype_shares")
-            .insert({
-              prototype_id: prototypeId,
-              shared_by: user.id, // UUID legacy field
-              clerk_id: user.id, // New clerk_id field
-              email: email.toLowerCase(),
-              permission,
-              is_link_share: false,
-            });
-
-          if (shareError) throw shareError;
-        }
-
-        // Invalidate queries to refresh the UI
-        queryClient.invalidateQueries({
-          queryKey: ["prototype-shares", prototypeId],
-        });
-
-        toast({
-          title: "Success",
-          description: `Prototype shared with ${email}`,
-        });
-
-        return true;
-      } catch (error: any) {
-        console.error("Error sharing prototype:", error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to share prototype",
-          variant: "destructive",
-        });
-        return false;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [supabase, user?.id, toast, queryClient]
-  );
-
-  const unsharePrototype = useCallback(
-    async (prototypeId: string, email: string) => {
-      if (!user?.id) {
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to unshare prototypes",
-          variant: "destructive",
-        });
-        return null;
-      }
-
-      setIsLoading(true);
-      try {
-        // Check if the prototype exists and the user has permission to unshare it
-        const { data: prototype, error: prototypeError } = await supabase
-          .from("prototypes")
-          .select("id, name, created_by")
-          .eq("id", prototypeId)
-          .single();
-
-        if (prototypeError) throw prototypeError;
-
-        // Only the creator can unshare the prototype
-        if (prototype.created_by !== user.id) {
-          throw new Error("You don't have permission to unshare this prototype");
-        }
-
-        // Delete the share
-        const { error: deleteError } = await supabase
-          .from("prototype_shares")
-          .delete()
-          .eq("prototype_id", prototypeId)
-          .eq("email", email.toLowerCase());
-
-        if (deleteError) throw deleteError;
-
-        // Invalidate queries to refresh the UI
-        queryClient.invalidateQueries({
-          queryKey: ["prototype-shares", prototypeId],
-        });
-
-        toast({
-          title: "Success",
-          description: `Prototype unshared with ${email}`,
-        });
-
-        return true;
-      } catch (error: any) {
-        console.error("Error unsharing prototype:", error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to unshare prototype",
-          variant: "destructive",
-        });
-        return false;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [supabase, user?.id, toast, queryClient]
-  );
-
-  const createPublicLink = useCallback(
-    async (prototypeId: string, permission: "view" | "comment" = "view") => {
-      if (!user?.id) {
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to create a public link",
-          variant: "destructive",
-        });
-        return null;
-      }
-
-      setIsLoading(true);
-      try {
-        // Check if the prototype exists and the user has permission to create a public link
-        const { data: prototype, error: prototypeError } = await supabase
-          .from("prototypes")
-          .select("id, name, created_by")
-          .eq("id", prototypeId)
-          .single();
-
-        if (prototypeError) throw prototypeError;
-
-        // Only the creator can create a public link
-        if (prototype.created_by !== user.id) {
-          throw new Error("You don't have permission to create a public link for this prototype");
-        }
-
-        // Check if a public link already exists
-        const { data: existingShare, error: existingShareError } = await supabase
-          .from("prototype_shares")
-          .select("id, share_id")
-          .eq("prototype_id", prototypeId)
-          .eq("is_public", true)
-          .maybeSingle();
-
-        if (existingShareError) throw existingShareError;
-
-        let shareId;
-        if (existingShare) {
-          // Update existing share
-          const { error: updateError } = await supabase
-            .from("prototype_shares")
-            .update({
-              permission,
-              accessed_at: null, // Reset accessed_at
-            })
-            .eq("id", existingShare.id);
-
-          if (updateError) throw updateError;
-          shareId = existingShare.share_id;
-        } else {
-          // Create new share
-          shareId = Math.random().toString(36).substring(2, 15);
-          const { error: shareError } = await supabase
-            .from("prototype_shares")
-            .insert({
-              prototype_id: prototypeId,
-              shared_by: user.id,
-              share_id: shareId,
-              permission,
-              is_public: true,
-              is_link_share: true,
-            });
-
-          if (shareError) throw shareError;
-        }
-
-        // Invalidate queries to refresh the UI
-        queryClient.invalidateQueries({
-          queryKey: ["prototype-shares", prototypeId],
-        });
-
-        toast({
-          title: "Success",
-          description: "Public link created",
-        });
-
-        return shareId;
-      } catch (error: any) {
-        console.error("Error creating public link:", error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to create public link",
-          variant: "destructive",
-        });
-        return null;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [supabase, user?.id, toast, queryClient]
-  );
-
-  const revokePublicLink = useCallback(
-    async (prototypeId: string) => {
-      if (!user?.id) {
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to revoke the public link",
-          variant: "destructive",
-        });
-        return null;
-      }
-
-      setIsLoading(true);
-      try {
-        // Check if the prototype exists and the user has permission to revoke the public link
-        const { data: prototype, error: prototypeError } = await supabase
-          .from("prototypes")
-          .select("id, name, created_by")
-          .eq("id", prototypeId)
-          .single();
-
-        if (prototypeError) throw prototypeError;
-
-        // Only the creator can revoke the public link
-        if (prototype.created_by !== user.id) {
-          throw new Error("You don't have permission to revoke the public link for this prototype");
-        }
-
-        // Delete the share
-        const { error: deleteError } = await supabase
-          .from("prototype_shares")
-          .delete()
-          .eq("prototype_id", prototypeId)
-          .eq("is_public", true);
-
-        if (deleteError) throw deleteError;
-
-        // Invalidate queries to refresh the UI
-        queryClient.invalidateQueries({
-          queryKey: ["prototype-shares", prototypeId],
-        });
-
-        toast({
-          title: "Success",
-          description: "Public link revoked",
-        });
-
-        return true;
-      } catch (error: any) {
-        console.error("Error revoking public link:", error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to revoke public link",
-          variant: "destructive",
-        });
-        return false;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [supabase, user?.id, toast, queryClient]
-  );
-
-  const getPrototypeShares = useCallback(
-    async (prototypeId: string) => {
-      try {
-        const { data, error } = await supabase
-          .from("prototype_shares")
-          .select("*")
-          .eq("prototype_id", prototypeId)
-          .not("is_public", "is", true);
-
+  // Create email share
+  const createEmailShare = useCallback(async (shareData: ShareFormData) => {
+    setIsCreatingShare(true);
+    try {
+      // Check if a share for this email already exists
+      const existingShare = shares.find(share => 
+        !share.is_link_share && share.email === shareData.email
+      );
+      
+      if (existingShare) {
+        // Update existing share
+        const { error } = await supabase
+          .from('prototype_shares')
+          .update({ 
+            permission: shareData.permission 
+          })
+          .eq('id', existingShare.id);
+          
         if (error) throw error;
-
-        return data;
-      } catch (error: any) {
-        console.error("Error fetching prototype shares:", error);
+        
         toast({
-          title: "Error",
-          description: error.message || "Failed to fetch prototype shares",
-          variant: "destructive",
+          title: 'Share updated',
+          description: `Updated permissions for ${shareData.email}`
         });
-        return [];
+        
+        await fetchShares();
+        return;
       }
-    },
-    [supabase, toast]
-  );
+      
+      // Create new share
+      const { data, error } = await supabase
+        .from('prototype_shares')
+        .insert({
+          prototype_id: prototypeId,
+          shared_by: clerkId,
+          email: shareData.email,
+          permission: shareData.permission,
+          is_link_share: false,
+          is_public: false
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      toast({
+        title: 'Prototype shared',
+        description: `Prototype shared with ${shareData.email}`
+      });
+      
+      await fetchShares();
+    } catch (error) {
+      console.error('Error creating email share:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to share prototype',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsCreatingShare(false);
+    }
+  }, [prototypeId, clerkId, shares, supabase, toast, fetchShares]);
+
+  // Update share permission
+  const updateSharePermission = useCallback(async (shareId: string, permission: 'view' | 'edit' | 'admin') => {
+    setIsUpdatingShare(true);
+    try {
+      const { error } = await supabase
+        .from('prototype_shares')
+        .update({ permission })
+        .eq('id', shareId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: 'Permission updated',
+        description: 'Share permission has been updated'
+      });
+      
+      await fetchShares();
+    } catch (error) {
+      console.error('Error updating share permission:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update permission',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsUpdatingShare(false);
+    }
+  }, [supabase, toast, fetchShares]);
+
+  // Update link share options
+  const updateLinkShare = useCallback(async (options: LinkShareOptions) => {
+    setIsUpdatingShare(true);
+    try {
+      // Check if a link share already exists
+      const linkShare = getLinkShare();
+      
+      if (linkShare) {
+        // Update existing link share
+        const { error } = await supabase
+          .from('prototype_shares')
+          .update({ 
+            is_public: options.is_public,
+            permission: options.permission
+          })
+          .eq('id', linkShare.id);
+          
+        if (error) throw error;
+      } else {
+        // Create new link share
+        const { error } = await supabase
+          .from('prototype_shares')
+          .insert({
+            prototype_id: prototypeId,
+            shared_by: clerkId,
+            is_link_share: true,
+            is_public: options.is_public,
+            permission: options.permission,
+            email: null
+          });
+          
+        if (error) throw error;
+      }
+      
+      toast({
+        title: 'Link updated',
+        description: 'Share link settings have been updated'
+      });
+      
+      await fetchShares();
+    } catch (error) {
+      console.error('Error updating link share:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update link settings',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsUpdatingShare(false);
+    }
+  }, [prototypeId, clerkId, supabase, toast, fetchShares, getLinkShare]);
+
+  // Remove a share
+  const removeShare = useCallback(async (shareId: string) => {
+    setIsDeletingShare(true);
+    try {
+      const { error } = await supabase
+        .from('prototype_shares')
+        .delete()
+        .eq('id', shareId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: 'Share removed',
+        description: 'Share has been removed'
+      });
+      
+      await fetchShares();
+    } catch (error) {
+      console.error('Error removing share:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to remove share',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsDeletingShare(false);
+    }
+  }, [supabase, toast, fetchShares]);
+
+  // Load shares when component mounts
+  useEffect(() => {
+    fetchShares();
+  }, [fetchShares]);
 
   return {
-    isLoading,
-    sharePrototype,
-    unsharePrototype,
-    createPublicLink,
-    revokePublicLink,
-    getPrototypeShares,
+    shares,
+    isLoadingShares,
+    isCreatingShare,
+    isUpdatingShare,
+    isDeletingShare,
+    createEmailShare,
+    updateLinkShare,
+    updateSharePermission,
+    removeShare,
+    getLinkShare,
+    getEmailShares
   };
 }

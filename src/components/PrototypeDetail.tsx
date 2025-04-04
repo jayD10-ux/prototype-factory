@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -53,7 +54,7 @@ export const PrototypeDetail = () => {
           .from('prototype_shares' as any)
           .select('*')
           .eq('prototype_id', id)
-          .or(`email.eq.${user?.primaryEmailAddress?.emailAddress},is_public.eq.true`);
+          .or(`email.eq.${user?.email},is_public.eq.true`);
         
         if (shareError || !shareData || shareData.length === 0) {
           toast({

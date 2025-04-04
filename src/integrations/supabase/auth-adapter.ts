@@ -1,55 +1,55 @@
 
 import { supabase } from './client';
-import { useClerk, useAuth, useUser } from '@clerk/clerk-react';
+import { useEffect, useState, useCallback } from 'react';
+import { useAuth } from '@clerk/clerk-react';
 
 /**
- * This adapter ensures that Supabase client can be used with Clerk auth
- * It passes JWT tokens from Clerk to Supabase
+ * This is a utility hook to synchronize Clerk sessions with Supabase.
+ * It requests a JWT token from Clerk formatted for Supabase and 
+ * ensures that Supabase client is authenticated with this token.
  */
-export function useSupabaseWithClerkAuth() {
-  const { isSignedIn, getToken } = useAuth();
-  const { user } = useUser();
-  
-  const getSupabaseWithAuth = async () => {
-    if (!isSignedIn) return supabase;
-    
-    const token = await getToken({ template: 'supabase' });
-    if (!token) return supabase;
-    
-    return supabase.auth.setSession({
-      access_token: token,
-      refresh_token: '', // Not needed with Clerk's token
-    });
-  };
-  
-  return {
-    user,
-    isAuthenticated: isSignedIn,
-    getSupabaseWithAuth
-  };
-}
+export function useSupabaseAuth() {
+  const { getToken, isSignedIn } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-/**
- * Gets a Supabase client with Clerk JWT authentication 
- */
-export async function authorizedSupabaseClient() {
-  const clerk = window.Clerk;
-  if (!clerk || !clerk.session) {
-    return supabase;
-  }
+  const refreshSupabaseSession = useCallback(async () => {
+    try {
+      if (!isSignedIn) {
+        // If not signed in with Clerk, sign out from Supabase too
+        await supabase.auth.signOut();
+        return;
+      }
+
+      // Get a JWT for Supabase from Clerk
+      const token = await getToken({ template: 'supabase' });
+      
+      if (!token) {
+        console.error('Failed to get Supabase token from Clerk');
+        return;
+      }
+
+      // Use the token with Supabase client's auth.setSession method
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+
+      // Check if window.Clerk exists for integrations
+      if (typeof window !== 'undefined') {
+        // Store token for potential integrations
+        window.localStorage.setItem('supabase_auth_token', token);
+      }
+
+    } catch (error: any) {
+      console.error('Error refreshing Supabase session:', error.message);
+      setError(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [getToken, isSignedIn]);
+
+  useEffect(() => {
+    refreshSupabaseSession();
+  }, [refreshSupabaseSession, isSignedIn]);
   
-  try {
-    const token = await clerk.session.getToken({ template: 'supabase' });
-    if (!token) return supabase;
-    
-    const { data } = await supabase.auth.setSession({
-      access_token: token,
-      refresh_token: '',
-    });
-    
-    return data.session ? supabase : supabase;
-  } catch (error) {
-    console.error('Error getting authorized Supabase client:', error);
-    return supabase;
-  }
+  return { isLoading, error, refreshSession: refreshSupabaseSession };
 }

@@ -34,7 +34,7 @@ export function usePrototypeData(
           const { data: sharedPrototypeIds, error: sharedError } = await supabase
             .from('prototype_shares' as any)
             .select("prototype_id")
-            .eq("email", user?.primaryEmailAddress?.emailAddress) // Use email for now since we're transitioning
+            .eq("email", user?.email) // Use email for now since we're transitioning
             .eq("is_link_share", false);
             
           if (sharedError) throw sharedError;

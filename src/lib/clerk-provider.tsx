@@ -13,6 +13,7 @@ interface ClerkContextType {
   } | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isLoaded: boolean; // Added isLoaded property
 }
 
 const ClerkContext = createContext<ClerkContextType | undefined>(undefined);
@@ -35,7 +36,7 @@ export function ClerkAuthProvider({ children }: ClerkProviderProps) {
         // Create a user object that matches the structure expected by the app
         setUser({
           id: userId, // This is the Clerk ID now used in clerk_id columns
-          email: clerkUser.primaryEmailAddress?.emailAddress || '',
+          email: clerkUser.emailAddresses?.[0]?.emailAddress || '',
           name: clerkUser.fullName || clerkUser.firstName || '',
           avatar_url: clerkUser.imageUrl || undefined,
           created_at: clerkUser.createdAt ? new Date(clerkUser.createdAt).toISOString() : new Date().toISOString()
@@ -55,6 +56,7 @@ export function ClerkAuthProvider({ children }: ClerkProviderProps) {
     user,
     isLoading,
     isAuthenticated,
+    isLoaded: isClerkLoaded && isUserLoaded, // Add isLoaded for component usage
   };
 
   return (

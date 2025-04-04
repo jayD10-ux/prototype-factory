@@ -1,3 +1,4 @@
+
 // Update imports to use both Supabase and Clerk
 import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -169,8 +170,9 @@ export function usePrototypeFeedback(prototypeId: string) {
 
         if (prototypeError) throw prototypeError;
 
+        // Use a generic table insert since prototype_feedback_replies might not be defined in types
         const { data, error } = await supabase
-          .from("prototype_feedback_replies")
+          .from("prototype_feedback_replies" as any)
           .insert({
             comment_id: commentId,
             content: replyContent,
