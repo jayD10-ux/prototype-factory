@@ -2,7 +2,8 @@
 // Type definitions for Trusted Types Web API
 // https://w3c.github.io/webappsec-trusted-types/dist/spec/
 
-declare namespace TrustedTypesNamespace {
+// Define the interfaces directly in the global scope
+declare global {
   interface TrustedHTML {}
   interface TrustedScript {}
   interface TrustedScriptURL {}
@@ -26,17 +27,6 @@ declare namespace TrustedTypesNamespace {
       }
     ): TrustedTypePolicy;
   }
-}
-
-// Declare global interfaces
-declare global {
-  // Use the namespace's interfaces in the global scope
-  type TrustedHTML = TrustedTypesNamespace.TrustedHTML;
-  type TrustedScript = TrustedTypesNamespace.TrustedScript;
-  type TrustedScriptURL = TrustedTypesNamespace.TrustedScriptURL;
-  type TrustedURL = TrustedTypesNamespace.TrustedURL;
-  type TrustedTypePolicy = TrustedTypesNamespace.TrustedTypePolicy;
-  type TrustedTypePolicyFactory = TrustedTypesNamespace.TrustedTypePolicyFactory;
 
   // Augment the Window interface
   interface Window {
@@ -44,12 +34,15 @@ declare global {
   }
 }
 
-// Module declaration for importing
+// For module imports
 declare module 'trusted-types' {
-  export import TrustedHTML = TrustedTypesNamespace.TrustedHTML;
-  export import TrustedScript = TrustedTypesNamespace.TrustedScript;
-  export import TrustedScriptURL = TrustedTypesNamespace.TrustedScriptURL;
-  export import TrustedURL = TrustedTypesNamespace.TrustedURL;
-  export import TrustedTypePolicy = TrustedTypesNamespace.TrustedTypePolicy;
-  export import TrustedTypePolicyFactory = TrustedTypesNamespace.TrustedTypePolicyFactory;
+  export const TrustedHTML: TrustedHTML;
+  export const TrustedScript: TrustedScript;
+  export const TrustedScriptURL: TrustedScriptURL;
+  export const TrustedURL: TrustedURL;
+  export const TrustedTypePolicy: TrustedTypePolicy;
+  export const TrustedTypePolicyFactory: TrustedTypePolicyFactory;
 }
+
+// This is needed to make the file a module
+export {};
