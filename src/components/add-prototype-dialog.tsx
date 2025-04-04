@@ -1,3 +1,4 @@
+
 // Update the component to use isLoaded from the ClerkAuth context
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
@@ -40,7 +41,7 @@ export function AddPrototypeDialog({
           </TabsList>
           <TabsContent value="upload" className="mt-0">
             <UploadPrototypeDialog
-              onSuccess={() => onOpenChange(false)}
+              onUpload={() => onOpenChange(false)}
               embedded={true}
             />
           </TabsContent>

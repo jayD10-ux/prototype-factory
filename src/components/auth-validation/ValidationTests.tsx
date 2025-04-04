@@ -324,21 +324,37 @@ export function ValidationTests() {
       // Add reply to feedback (might require prototype_feedback_replies table)
       let replySuccess = false;
       try {
-        await supabase
-          .from('prototype_feedback_replies')
-          .insert({
-            comment_id: feedback.id,
-            content: 'Test reply',
-            created_by: clerkId
+        // Instead of directly accessing the table, we'll check if it exists first
+        const { data: tableExists } = await supabase
+          .rpc('column_exists', {
+            table_name: 'prototype_feedback_replies',
+            column_name: 'id'
           });
-        replySuccess = true;
+        
+        if (tableExists) {
+          // Use any() type assertion to bypass TypeScript's type checking for this dynamic table access
+          await (supabase.from('prototype_feedback_replies') as any)
+            .insert({
+              comment_id: feedback.id,
+              content: 'Test reply',
+              created_by: clerkId
+            });
+          replySuccess = true;
+        }
       } catch (replyError) {
         console.warn('Reply test skipped: table might not exist', replyError);
       }
       
       // Clean up by deleting feedback and prototype
       if (replySuccess) {
-        await supabase.from('prototype_feedback_replies').delete().eq('comment_id', feedback.id);
+        try {
+          // Use any() type assertion to bypass TypeScript's type checking
+          await (supabase.from('prototype_feedback_replies') as any)
+            .delete()
+            .eq('comment_id', feedback.id);
+        } catch (e) {
+          console.warn('Could not clean up feedback replies', e);
+        }
       }
       await supabase.from('prototype_feedback').delete().eq('id', feedback.id);
       await supabase.from('prototypes').delete().eq('id', prototype.id);
