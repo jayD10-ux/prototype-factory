@@ -1,3 +1,4 @@
+
 // Update imports to use both Supabase and Clerk
 import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";

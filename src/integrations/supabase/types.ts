@@ -227,6 +227,7 @@ export type Database = {
       }
       project_members: {
         Row: {
+          clerk_id: string | null
           created_at: string
           id: string
           project_id: string
@@ -234,6 +235,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          clerk_id?: string | null
           created_at?: string
           id?: string
           project_id: string
@@ -241,6 +243,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          clerk_id?: string | null
           created_at?: string
           id?: string
           project_id?: string
@@ -259,6 +262,7 @@ export type Database = {
       }
       projects: {
         Row: {
+          clerk_id: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -267,6 +271,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          clerk_id?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -275,6 +280,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          clerk_id?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -319,6 +325,7 @@ export type Database = {
       }
       prototype_feedback: {
         Row: {
+          clerk_id: string | null
           content: string
           created_at: string | null
           created_by: string | null
@@ -333,6 +340,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          clerk_id?: string | null
           content: string
           created_at?: string | null
           created_by?: string | null
@@ -347,6 +355,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          clerk_id?: string | null
           content?: string
           created_at?: string | null
           created_by?: string | null
@@ -461,14 +470,17 @@ export type Database = {
       }
       prototype_tags: {
         Row: {
+          clerk_id: string | null
           prototype_id: string
           tag_id: string
         }
         Insert: {
+          clerk_id?: string | null
           prototype_id: string
           tag_id: string
         }
         Update: {
+          clerk_id?: string | null
           prototype_id?: string
           tag_id?: string
         }
