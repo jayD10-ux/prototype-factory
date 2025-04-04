@@ -17,7 +17,8 @@ export function useSupabaseAuth() {
     try {
       if (!isSignedIn) {
         // If not signed in with Clerk, sign out from Supabase too
-        await supabase.auth.signOut();
+        // Use type assertion to help TypeScript recognize the method
+        await (supabase.auth as any).signOut();
         return;
       }
 
@@ -30,7 +31,8 @@ export function useSupabaseAuth() {
       }
 
       // Use the token with Supabase client
-      const { error: sessionError } = await supabase.auth.getSession();
+      // Use type assertion to help TypeScript recognize the method
+      const { error: sessionError } = await (supabase.auth as any).getSession();
       if (sessionError) throw sessionError;
 
       // Check if window.Clerk exists for integrations
