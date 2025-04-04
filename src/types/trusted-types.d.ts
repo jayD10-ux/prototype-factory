@@ -2,46 +2,47 @@
 // Type definitions for Trusted Types Web API
 // https://w3c.github.io/webappsec-trusted-types/dist/spec/
 
-/**
- * Global declarations for Trusted Types API
- */
+// Triple-slash directive to indicate this is a lib file
+/// <reference lib="dom" />
 
-// Define global interfaces without namespaces
-interface TrustedHTML {}
-interface TrustedScript {}
-interface TrustedScriptURL {}
-interface TrustedURL {}
+// Global declarations for the Trusted Types API
+declare namespace TrustedTypes {
+  interface TrustedHTML {}
+  interface TrustedScript {}
+  interface TrustedScriptURL {}
+  interface TrustedURL {}
 
-interface TrustedTypePolicy {
-  createHTML(input: string): TrustedHTML;
-  createScript(input: string): TrustedScript;
-  createScriptURL(input: string): TrustedScriptURL;
-  createURL?(input: string): TrustedURL;
+  interface TrustedTypePolicy {
+    createHTML(input: string): TrustedHTML;
+    createScript(input: string): TrustedScript;
+    createScriptURL(input: string): TrustedScriptURL;
+    createURL?(input: string): TrustedURL;
+  }
+
+  interface TrustedTypePolicyFactory {
+    createPolicy(
+      policyName: string,
+      policyOptions?: {
+        createHTML?: (input: string) => string;
+        createScript?: (input: string) => string;
+        createScriptURL?: (input: string) => string;
+        createURL?: (input: string) => string;
+      }
+    ): TrustedTypePolicy;
+  }
 }
 
-interface TrustedTypePolicyFactory {
-  createPolicy(
-    policyName: string,
-    policyOptions?: {
-      createHTML?: (input: string) => string;
-      createScript?: (input: string) => string;
-      createScriptURL?: (input: string) => string;
-      createURL?: (input: string) => string;
-    }
-  ): TrustedTypePolicy;
-}
-
-// Augment the Window interface
+// Extend Window interface
 interface Window {
-  trustedTypes?: TrustedTypePolicyFactory;
+  trustedTypes?: TrustedTypes.TrustedTypePolicyFactory;
 }
 
-// Also provide module declaration for imports
+// Ambient module declaration
 declare module 'trusted-types' {
-  export const TrustedHTML: TrustedHTML;
-  export const TrustedScript: TrustedScript;
-  export const TrustedScriptURL: TrustedScriptURL;
-  export const TrustedURL: TrustedURL;
-  export const TrustedTypePolicy: TrustedTypePolicy;
-  export const TrustedTypePolicyFactory: TrustedTypePolicyFactory;
+  export const TrustedHTML: TrustedTypes.TrustedHTML;
+  export const TrustedScript: TrustedTypes.TrustedScript;
+  export const TrustedScriptURL: TrustedTypes.TrustedScriptURL;
+  export const TrustedURL: TrustedTypes.TrustedURL;
+  export const TrustedTypePolicy: TrustedTypes.TrustedTypePolicy;
+  export const TrustedTypePolicyFactory: TrustedTypes.TrustedTypePolicyFactory;
 }
