@@ -2,7 +2,7 @@
 // Type definitions for Trusted Types Web API
 // https://w3c.github.io/webappsec-trusted-types/dist/spec/
 
-// Global interfaces that will be used in both declarations
+// Define the types directly in the global scope
 interface TrustedHTML {}
 interface TrustedScript {}
 interface TrustedScriptURL {}
@@ -27,20 +27,17 @@ interface TrustedTypePolicyFactory {
   ): TrustedTypePolicy;
 }
 
-// Module declaration for importing
+// Augment the Window interface
+interface Window {
+  trustedTypes?: TrustedTypePolicyFactory;
+}
+
+// Make these types available via import
 declare module 'trusted-types' {
   export type TrustedHTML = TrustedHTML;
   export type TrustedScript = TrustedScript;
   export type TrustedScriptURL = TrustedScriptURL;
   export type TrustedURL = TrustedURL;
-
   export type TrustedTypePolicy = TrustedTypePolicy;
   export type TrustedTypePolicyFactory = TrustedTypePolicyFactory;
-}
-
-// Global declarations for ambient usage
-declare global {
-  interface Window {
-    trustedTypes?: TrustedTypePolicyFactory;
-  }
 }

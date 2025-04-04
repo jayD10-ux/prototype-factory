@@ -2,13 +2,12 @@
 import { NotificationBell, PopoverNotificationCenter } from "@novu/notification-center";
 import { useNavigate } from "react-router-dom";
 import { useClerkAuth } from "@/lib/clerk-provider";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 
 export function NovuNotificationBell() {
   const navigate = useNavigate();
   const { isAuthenticated, isLoaded } = useClerkAuth();
   const [error, setError] = useState<Error | null>(null);
-  const [isNovuReady, setIsNovuReady] = useState(false);
   
   // Don't render anything until auth is loaded
   if (!isLoaded) {
@@ -44,7 +43,7 @@ export function NovuNotificationBell() {
             return false; // Don't trigger the default behavior
           }}
         >
-          {/* Crucial change: the render prop must handle null/undefined safely */}
+          {/* Safe rendering with proper fallbacks */}
           {(renderProps) => {
             try {
               // If renderProps is null/undefined, return a default bell
@@ -80,7 +79,6 @@ export function NovuNotificationBell() {
 }
 
 // Simple error boundary component to catch and handle errors
-// This prevents errors in the notification component from crashing the app
 function ErrorBoundaryWrapper({ 
   children, 
   fallback = <div>Error loading component</div> 

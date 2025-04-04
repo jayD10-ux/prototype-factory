@@ -1,7 +1,7 @@
 
+import React, { Suspense } from "react";
 import { NovuNotificationBell } from "./novu-notification-bell";
 import { useClerkAuth } from "@/lib/clerk-provider";
-import { Suspense, ErrorBoundary } from "react";
 
 // Simple error boundary component
 class NotificationErrorBoundary extends React.Component<
@@ -41,7 +41,7 @@ export function NotificationBell() {
   return (
     <NotificationErrorBoundary fallback={null}>
       <Suspense fallback={null}>
-        <NovuNotificationBell />
+        {isAuthenticated ? <NovuNotificationBell /> : null}
       </Suspense>
     </NotificationErrorBoundary>
   );
