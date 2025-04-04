@@ -22,12 +22,16 @@ export const NovuProvider: FC<NovuProviderProps> = ({ children }) => {
     console.log("Novu provider initialized");
   }, []);
   
+  // Important fix: Use an anonymous-user ID that will never match a real user
+  // This prevents issues with the Novu subscriber data when not authenticated
+  const subscriberId = isAuthenticated && user ? user.id : "anonymous-user-" + Math.random().toString(36).substring(2, 15);
+  
   // Always wrap in NovuProvider, even for anonymous users, to avoid rendering errors
   // This ensures the notification context is always available
   return (
     <ExternalNovuProvider
       applicationIdentifier={NOVU_APP_ID}
-      subscriberId={isAuthenticated && user ? user.id : "anonymous-user"}
+      subscriberId={subscriberId}
       // Only provide subscriber hash if authenticated
       subscriberHash=""
     >

@@ -57,11 +57,11 @@ export function NovuNotificationBell() {
       >
         {(props) => {
           try {
-            // Extra safety check - if props is null or undefined, use 0 for unseenCount
+            // Fixed: Handle null props gracefully
             if (!props) {
               return <NotificationBell unseenCount={0} />;
             }
-            // Safely handle the case where props.unseenCount might be undefined
+            // Fixed: Explicitly check for undefined unseenCount
             const unseenCount = typeof props.unseenCount === 'number' ? props.unseenCount : 0;
             return <NotificationBell unseenCount={unseenCount} />;
           } catch (err) {
