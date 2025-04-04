@@ -8,7 +8,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useClerkAuth } from "@/lib/clerk-provider"
 import { useNavigate } from "react-router-dom"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -16,8 +15,7 @@ import { LogOut } from "lucide-react"
 import { useUser, useClerk } from "@clerk/clerk-react"
 
 export function ProfileDropdown() {
-  const { user } = useClerkAuth()
-  const { user: clerkUser } = useUser()
+  const { user } = useUser()
   const { signOut } = useClerk()
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
@@ -34,11 +32,8 @@ export function ProfileDropdown() {
     }
   };
 
-  const profileName = clerkUser?.firstName ? 
-    `${clerkUser.firstName} ${clerkUser.lastName || ''}`.trim() : 
-    user?.email?.split('@')[0] || 'Guest';
-    
-  const profileAvatar = clerkUser?.imageUrl || user?.user_metadata?.avatar_url;
+  const profileName = user?.fullName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'Guest';
+  const profileAvatar = user?.imageUrl;
 
   return (
     <DropdownMenu>
@@ -58,7 +53,7 @@ export function ProfileDropdown() {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{profileName}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {clerkUser?.primaryEmailAddress?.emailAddress || user?.email}
+              {user?.primaryEmailAddress?.emailAddress}
             </p>
           </div>
         </DropdownMenuLabel>

@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,7 +8,7 @@ import { useEffect, useState } from "react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { PrototypeDetail } from "@/components/PrototypeDetail";
-import { ClerkAuthProvider, useClerkAuth } from "@/lib/clerk-provider";
+import { useClerkAuth } from "./lib/clerk-provider";
 import { EnvironmentBadge } from "./components/environment-badge";
 import Onboarding from "./pages/Onboarding";
 import { NovuNotificationProvider } from "./components/notification/novu-provider";
@@ -15,7 +16,6 @@ import SharedPrototype from './pages/SharedPrototype';
 import { SignIn, SignUp } from "@clerk/clerk-react";
 import { fixSandpackPreviewError } from "./components/SandpackPreview";
 import { SupabaseProvider } from "./lib/supabase-provider";
-import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -86,7 +86,7 @@ const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRout
 };
 
 const AppRoutes = () => {
-  const { isAuthenticated, isLoading, user } = useClerkAuth();
+  const { isAuthenticated, isLoading } = useClerkAuth();
   const [initialized, setInitialized] = useState(false);
   
   useEffect(() => {
@@ -104,27 +104,9 @@ const AppRoutes = () => {
     );
   }
 
-  const createSessionFromClerkUser = () => {
-    if (!user) return null;
-    
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        app_metadata: {},
-        user_metadata: {},
-        aud: "authenticated",
-        created_at: ""
-      },
-      access_token: "",
-      refresh_token: "",
-      expires_in: 3600
-    };
-  };
-
   return (
     <NavigationWrapper>
-      <SupabaseProvider session={createSessionFromClerkUser()}>
+      <SupabaseProvider>
         <Routes>
           <Route path="/sign-in/*" element={<SignIn routing="path" path="/sign-in" />} />
           <Route path="/sign-up/*" element={<SignUp routing="path" path="/sign-up" />} />
@@ -176,9 +158,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
-          <ClerkAuthProvider>
-            <AppRoutes />
-          </ClerkAuthProvider>
+          <AppRoutes />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

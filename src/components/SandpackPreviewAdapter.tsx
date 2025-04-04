@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useClerkAuth } from "@/lib/clerk-provider";
+import { useUser } from "@clerk/clerk-react";
 import { FeedbackUser } from "@/types/feedback";
 import { SandpackPreview } from "./SandpackPreview";
 
@@ -27,22 +27,22 @@ export const SandpackPreviewAdapter = ({
   iframeSrc,
   autorun = true,
 }: SandpackPreviewAdapterProps) => {
-  const { user, isAuthenticated } = useClerkAuth();
+  const { user, isSignedIn } = useUser();
   const [feedbackUser, setFeedbackUser] = useState<FeedbackUser | null>(null);
 
   useEffect(() => {
-    if (user) {
-      // Convert user to FeedbackUser type (making sure we follow the expected structure)
+    if (user && isSignedIn) {
+      // Convert Clerk user to FeedbackUser type
       const feedbackUserData: FeedbackUser = {
         id: user.id,
-        name: user.user_metadata?.name || "Anonymous",
-        avatar_url: user.user_metadata?.avatar_url || "",
+        name: user.fullName || "Anonymous",
+        avatar_url: user.imageUrl || "",
       };
       setFeedbackUser(feedbackUserData);
     } else {
       setFeedbackUser(null);
     }
-  }, [user]);
+  }, [user, isSignedIn]);
 
   return (
     <SandpackPreview />

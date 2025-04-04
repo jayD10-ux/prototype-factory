@@ -1,121 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
+import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { Label } from "@/components/ui/label";
-import supabaseAuthWrapper from "@/integrations/supabase/auth-wrapper";
+import { SignIn } from "@clerk/clerk-react";
 
 const LoginPage = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
-  const { toast } = useToast();
-
-  // Check for redirect URL in localStorage or query params
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const redirectParam = params.get('redirect');
-    
-    if (redirectParam) {
-      localStorage.setItem('redirectAfterLogin', redirectParam);
-    }
-    
-    // Check if the user is already logged in
-    const checkSession = async () => {
-      const { data } = await supabaseAuthWrapper.getSession();
-      if (data.session) {
-        handleAfterLogin();
-      }
-    };
-    
-    checkSession();
-  }, [location]);
-
-  const handleAfterLogin = () => {
-    // Check if we have a redirect URL stored
-    const redirectUrl = localStorage.getItem('redirectAfterLogin');
-    
-    if (redirectUrl) {
-      localStorage.removeItem('redirectAfterLogin');
-      navigate(redirectUrl);
-    } else {
-      navigate("/dashboard");
-    }
-  };
-
-  const handleDemoLogin = async () => {
-    try {
-      setIsLoading(true);
-      const { error } = await supabaseAuthWrapper.signInWithPassword({
-        email: "demo@example.com",
-        password: "demo123",
-      });
-
-      if (error) throw error;
-      handleAfterLogin();
-    } catch (error: any) {
-      toast({
-        title: "Demo login failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEmailLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setIsLoading(true);
-      const { error } = await supabaseAuthWrapper.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-      handleAfterLogin();
-    } catch (error: any) {
-      toast({
-        title: "Login failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGitHubLogin = async () => {
-    try {
-      // Store the redirect URL before GitHub auth
-      const redirectAfterLogin = localStorage.getItem('redirectAfterLogin');
-      const redirectTo = redirectAfterLogin || `${window.location.origin}/dashboard`;
-      
-      const { error } = await supabaseAuthWrapper.signInWithOAuth({
-        provider: "github",
-        options: {
-          redirectTo
-        }
-      });
-      if (error) throw error;
-    } catch (error: any) {
-      toast({
-        title: "Login failed",
-        description: "Could not sign in with GitHub. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSkip = () => {
-    localStorage.setItem("skippedLogin", "true");
-    handleAfterLogin();
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -125,44 +15,10 @@ const LoginPage = () => {
           <CardDescription>Sign in to your account to continue</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleEmailLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Loading..." : "Sign In"}
-            </Button>
-          </form>
-          <div className="flex flex-col space-y-2 mt-4">
-            <Button type="button" className="w-full" onClick={handleGitHubLogin} variant="secondary" disabled={isLoading}>
-              Sign in with GitHub
-            </Button>
-            <Button type="button" className="w-full" onClick={handleDemoLogin} variant="secondary" disabled={isLoading}>
-              Sign in with Demo Account
-            </Button>
-          </div>
-          <Button type="button" variant="link" className="w-full mt-4" onClick={handleSkip}>
-            Skip Login
-          </Button>
+          <SignIn 
+            redirectUrl="/dashboard" 
+            signUpUrl="/sign-up"
+          />
         </CardContent>
       </Card>
     </div>

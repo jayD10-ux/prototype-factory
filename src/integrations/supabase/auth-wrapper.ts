@@ -1,21 +1,25 @@
 
-import { supabase } from './client';
+// This wrapper now uses Clerk instead of Supabase Auth
+// It maintains a similar interface for backward compatibility during migration
+import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 
-// This wrapper handles compatibility issues between different versions of Supabase
 const supabaseAuthWrapper = {
+  // These methods now throw errors as they should no longer be used
+  // The app should be updated to use Clerk's authentication methods directly
+  
   async getSession() {
-    // Using the current Supabase API version
-    return await supabase.auth.getSession();
+    console.warn("⚠️ supabaseAuthWrapper.getSession() is deprecated. Use Clerk's useAuth() hook instead.");
+    throw new Error("Supabase Auth is no longer used. Please use Clerk for authentication.");
   },
 
-  async signInWithPassword(credentials: { email: string; password: string }) {
-    // Using the current Supabase API version
-    return await supabase.auth.signInWithPassword(credentials);
+  async signInWithPassword() {
+    console.warn("⚠️ supabaseAuthWrapper.signInWithPassword() is deprecated. Use Clerk's signIn() method instead.");
+    throw new Error("Supabase Auth is no longer used. Please use Clerk for authentication.");
   },
 
-  async signInWithOAuth(params: { provider: string; options?: any }) {
-    // Using the current Supabase API version
-    return await supabase.auth.signInWithOAuth(params);
+  async signInWithOAuth() {
+    console.warn("⚠️ supabaseAuthWrapper.signInWithOAuth() is deprecated. Use Clerk's OAuth providers instead.");
+    throw new Error("Supabase Auth is no longer used. Please use Clerk for authentication.");
   }
 };
 

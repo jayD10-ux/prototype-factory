@@ -1,36 +1,27 @@
 
 import { supabase } from './client';
-import { useClerkAuth } from '@/lib/clerk-provider';
+import { useClerk, useAuth, useUser } from '@clerk/clerk-react';
 
 /**
  * This adapter ensures that Supabase client can be used with Clerk auth
- * It sets the Supabase auth token based on the user's Clerk session
+ * In the future, we will set up JWT token passing from Clerk to Supabase
  */
 export function useSupabaseWithClerkAuth() {
-  const { user, isAuthenticated } = useClerkAuth();
-  
-  // This would be where we'd set up Supabase auth with the Clerk token
-  // However, for now we'll just return the user and auth state
-  // In a real implementation, you might generate a JWT with Clerk
-  // and set it on the Supabase client
+  const { isSignedIn } = useAuth();
+  const { user } = useUser();
   
   return {
     user,
-    isAuthenticated,
+    isAuthenticated: isSignedIn,
     supabase
   };
 }
 
 /**
- * This function allows us to manually set auth for specific Supabase requests
- * when we need to make authorized requests to the Supabase database
+ * In the future, this function will set up JWT authentication between Clerk and Supabase
  */
 export async function authorizedSupabaseClient() {
-  // In a production implementation, you would:
-  // 1. Get a JWT token from Clerk that includes the user's ID
-  // 2. Use that token to authenticate with Supabase
-  // 3. Return an authenticated Supabase client
-  
-  // For now, we just return the regular client
+  // For now, just return the regular client
+  // In phase 2, we will implement JWT token passing
   return supabase;
 }
