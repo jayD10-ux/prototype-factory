@@ -8,7 +8,7 @@ import { Button } from "./ui/button";
 import { useClerkAuth } from "@/lib/clerk-provider";
 
 export default function Dashboard() {
-  const { isAuthenticated } = useClerkAuth();
+  const { isAuthenticated, isLoaded } = useClerkAuth();
 
   return (
     <>
@@ -26,7 +26,7 @@ export default function Dashboard() {
                 Validation Tests
               </Button>
             </Link>
-            {isAuthenticated && (
+            {isLoaded && isAuthenticated && (
               <>
                 <NotificationBell />
                 <ProfileDropdown />
