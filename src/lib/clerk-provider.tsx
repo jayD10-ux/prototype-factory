@@ -5,7 +5,12 @@ import { useAuth, useUser } from '@clerk/clerk-react';
 import type { User } from '@/types/supabase';
 
 interface ClerkContextType {
-  user: User | null;
+  user: {
+    id: string;
+    email?: string;
+    name?: string;
+    avatar_url?: string;
+  } | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
@@ -28,21 +33,13 @@ export function ClerkAuthProvider({ children }: ClerkProviderProps) {
     if (isClerkLoaded && isUserLoaded) {
       if (clerkUser && userId) {
         // Create a user object that matches the structure expected by the app
-        const adaptedUser: User = {
+        setUser({
           id: userId,
           email: clerkUser.primaryEmailAddress?.emailAddress || '',
-          app_metadata: {
-            provider: 'clerk'
-          },
-          user_metadata: {
-            name: clerkUser.fullName || undefined,
-            avatar_url: clerkUser.imageUrl || undefined
-          },
-          aud: 'authenticated',
+          name: clerkUser.fullName || clerkUser.firstName || '',
+          avatar_url: clerkUser.imageUrl || undefined,
           created_at: clerkUser.createdAt ? new Date(clerkUser.createdAt).toISOString() : new Date().toISOString()
-        };
-
-        setUser(adaptedUser);
+        });
       } else {
         setUser(null);
       }

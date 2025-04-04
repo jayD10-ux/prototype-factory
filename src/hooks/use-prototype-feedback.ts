@@ -1,348 +1,369 @@
-import { useState, useEffect } from "react";
-import { useToast } from "./use-toast";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import supabaseAuthWrapper from "@/integrations/supabase/auth-wrapper";
-import { Json } from "@/integrations/supabase/types";
+// Update imports to use both Supabase and Clerk
+import { useState, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSupabase } from "@/lib/supabase-provider";
-
-export interface PrototypeFeedback {
-  id: string;
-  created_at?: string | null;
-  updated_at?: string | null;
-  content: string;
-  prototype_id?: string | null;
-  created_by?: string | null;
-  element_selector?: string | null;
-  element_xpath?: string | null;
-  element_metadata?: Json | null;
-  device_type?: string | null;
-  position?: Json | null;
-  status?: string | null;
-}
-
-export interface PrototypeReaction {
-  id: string;
-  created_at?: string | null;
-  prototype_id?: string | null;
-  feedback_id?: string | null;
-  created_by?: string | null;
-  reaction_type: string;
-}
+import { useClerkAuth } from "@/lib/clerk-provider";
+import { useToast } from "@/hooks/use-toast";
+import { notifyNewComment, notifyCommentReply, notifyCommentResolved } from "@/utils/notification-utils";
 
 export function usePrototypeFeedback(prototypeId: string) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFeedbackEnabled, setIsFeedbackEnabled] = useState(false);
+  const [selectedFeedback, setSelectedFeedback] = useState<any | null>(null);
+  
+  const { supabase } = useSupabase();
+  const { user } = useClerkAuth();
   const { toast } = useToast();
-  const [isAddingFeedback, setIsAddingFeedback] = useState(false);
-  const [isAddingReaction, setIsAddingReaction] = useState(false);
-  const [isUpdatingFeedback, setIsUpdatingFeedback] = useState(false);
-  const [isResolvingFeedback, setIsResolvingFeedback] = useState(false);
-  const { session, user } = useSupabase();
+  const queryClient = useQueryClient();
+  
+  const currentUserId = user?.id;
 
-  const isAuthenticated = !!session && !!user;
-
-  const {
-    data: feedbackItems,
-    isLoading: isLoadingFeedback,
-    refetch: refetchFeedback
-  } = useQuery({
-    queryKey: ['prototype-feedback', prototypeId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('prototype_feedback')
-        .select('*')
-        .eq('prototype_id', prototypeId)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error("Error fetching prototype feedback:", error);
-        throw error;
-      }
-
-      return (data || []) as unknown as PrototypeFeedback[];
-    }
-  });
-
-  const checkUserPermission = async (prototypeId: string): Promise<boolean> => {
+  const enableFeedback = useCallback(async () => {
+    setIsSubmitting(true);
     try {
-      if (!session?.user) {
-        return false;
-      }
+      const { error } = await supabase
+        .from("prototypes")
+        .update({ feedback_enabled: true })
+        .eq("id", prototypeId);
 
-      const userId = session.user.id;
+      if (error) throw error;
 
-      const { data: prototypeData } = await supabase
-        .from('prototypes')
-        .select('created_by')
-        .eq('id', prototypeId)
+      setIsFeedbackEnabled(true);
+      toast({
+        title: "Feedback Enabled",
+        description: "Feedback is now enabled for this prototype",
+      });
+    } catch (error: any) {
+      console.error("Error enabling feedback:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to enable feedback",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [supabase, prototypeId, toast]);
+
+  const disableFeedback = useCallback(async () => {
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("prototypes")
+        .update({ feedback_enabled: false })
+        .eq("id", prototypeId);
+
+      if (error) throw error;
+
+      setIsFeedbackEnabled(false);
+      toast({
+        title: "Feedback Disabled",
+        description: "Feedback is now disabled for this prototype",
+      });
+    } catch (error: any) {
+      console.error("Error disabling feedback:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to disable feedback",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [supabase, prototypeId, toast]);
+  
+  // Example of how to update all the methods that used supabaseAuthWrapper.getSession() previously:
+  const addFeedback = useCallback(async (feedbackData: any) => {
+    if (!currentUserId) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to add comments",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const { data: prototype, error: prototypeError } = await supabase
+        .from("prototypes")
+        .select("created_by, name")
+        .eq("id", prototypeId)
         .single();
 
-      if (prototypeData?.created_by === userId) {
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error("Error checking permission:", error);
-      return false;
-    }
-  };
-
-  const addFeedback = async (feedbackData: Omit<PrototypeFeedback, 'id' | 'created_at' | 'updated_at'>) => {
-    try {
-      if (!isAuthenticated) {
-        console.log("User not authenticated, cannot add feedback");
-        return null;
-      }
-      
-      setIsAddingFeedback(true);
-
-      const userId = session?.user?.id;
-      
-      if (!userId) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to leave feedback.",
-          variant: "destructive"
-        });
-        return null;
-      }
-
-      console.log("Adding feedback with user ID:", userId);
+      if (prototypeError) throw prototypeError;
 
       const { data, error } = await supabase
-        .from('prototype_feedback')
-        .insert([
-          {
-            ...feedbackData,
-            prototype_id: prototypeId,
-            created_by: userId
-          }
-        ])
+        .from("prototype_feedback")
+        .insert({
+          ...feedbackData,
+          prototype_id: prototypeId,
+          created_by: currentUserId,
+        })
         .select()
         .single();
 
       if (error) throw error;
 
+      // Notify prototype owner if the commenter is not the owner
+      if (prototype.created_by !== currentUserId) {
+        await notifyNewComment(
+          prototype.created_by,
+          currentUserId,
+          prototypeId,
+          prototype.name,
+          data.id,
+          feedbackData.content
+        );
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["prototype-feedback"] });
       toast({
-        title: "Feedback added",
-        description: "Your feedback has been submitted."
+        title: "Feedback Added",
+        description: "Your feedback has been added successfully",
       });
 
-      refetchFeedback();
-      
-      return data as PrototypeFeedback;
-    } catch (error) {
+      return data;
+    } catch (error: any) {
       console.error("Error adding feedback:", error);
       toast({
         title: "Error",
-        description: "Failed to add feedback. Please try again.",
-        variant: "destructive"
+        description: error.message || "Failed to add feedback",
+        variant: "destructive",
       });
       return null;
     } finally {
-      setIsAddingFeedback(false);
+      setIsSubmitting(false);
     }
-  };
+  }, [supabase, prototypeId, currentUserId, toast, queryClient]);
 
-  const updateFeedback = async (feedbackId: string, content: string) => {
-    try {
-      setIsUpdatingFeedback(true);
-      
-      const { error } = await supabase
-        .from('prototype_feedback')
-        .update({ content })
-        .eq('id', feedbackId);
+  const addReply = useCallback(
+    async (commentId: string, replyContent: string) => {
+      if (!currentUserId) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to add replies",
+          variant: "destructive",
+        });
+        return null;
+      }
 
-      if (error) throw error;
-      
-      toast({
-        title: "Feedback updated",
-        description: "Your feedback has been updated."
-      });
-      
-      refetchFeedback();
-    } catch (error) {
-      console.error("Error updating feedback:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update feedback. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsUpdatingFeedback(false);
-    }
-  };
+      setIsSubmitting(true);
 
-  const resolveFeedback = async (feedbackId: string) => {
-    try {
-      setIsResolvingFeedback(true);
-      
-      const { error } = await supabase
-        .from('prototype_feedback')
-        .update({ status: 'resolved' })
-        .eq('id', feedbackId);
+      try {
+        const { data: comment, error: commentError } = await supabase
+          .from("prototype_feedback")
+          .select("created_by, prototype_id")
+          .eq("id", commentId)
+          .single();
 
-      if (error) throw error;
-      
-      toast({
-        title: "Feedback resolved",
-        description: "This feedback has been marked as resolved."
-      });
-      
-      refetchFeedback();
-    } catch (error) {
-      console.error("Error resolving feedback:", error);
-      toast({
-        title: "Error",
-        description: "Failed to resolve feedback. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsResolvingFeedback(false);
-    }
-  };
+        if (commentError) throw commentError;
 
-  const addReaction = async (feedbackId: string, reactionType: string) => {
-    try {
-      setIsAddingReaction(true);
-      
-      const { data: sessionData } = await supabaseAuthWrapper.getSession();
-      const userId = sessionData.session?.user?.id;
+        const { data: prototype, error: prototypeError } = await supabase
+          .from("prototypes")
+          .select("name")
+          .eq("id", comment.prototype_id)
+          .single();
 
-      if (!userId) {
+        if (prototypeError) throw prototypeError;
+
+        const { data, error } = await supabase
+          .from("prototype_feedback_replies")
+          .insert({
+            comment_id: commentId,
+            content: replyContent,
+            created_by: currentUserId,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Notify comment owner if the replier is not the owner
+        if (comment.created_by !== currentUserId) {
+          await notifyCommentReply(
+            comment.created_by,
+            currentUserId,
+            prototypeId,
+            prototype.name,
+            commentId,
+            replyContent
+          );
+        }
+
+        queryClient.invalidateQueries({ queryKey: ["prototype-feedback"] });
+        toast({
+          title: "Reply Added",
+          description: "Your reply has been added successfully",
+        });
+
+        return data;
+      } catch (error: any) {
+        console.error("Error adding reply:", error);
         toast({
           title: "Error",
-          description: "You must be logged in to react to feedback.",
-          variant: "destructive"
+          description: error.message || "Failed to add reply",
+          variant: "destructive",
         });
-        return;
+        return null;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [supabase, currentUserId, toast, queryClient, prototypeId]
+  );
+
+  const resolveFeedback = useCallback(
+    async (commentId: string) => {
+      if (!currentUserId) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to resolve feedback",
+          variant: "destructive",
+        });
+        return false;
       }
 
-      const { error } = await supabase
-        .from('prototype_reactions')
-        .insert([
-          {
-            prototype_id: prototypeId,
-            feedback_id: feedbackId,
-            created_by: userId,
-            reaction_type: reactionType
-          }
-        ]);
+      setIsSubmitting(true);
 
-      if (error) throw error;
+      try {
+        const { data: comment, error: commentError } = await supabase
+          .from("prototype_feedback")
+          .select("created_by, prototype_id")
+          .eq("id", commentId)
+          .single();
 
-      toast({
-        title: "Reaction added",
-        description: "Your reaction has been recorded."
-      });
+        if (commentError) throw commentError;
 
-      refetchFeedback();
-    } catch (error) {
-      console.error("Error adding reaction:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add reaction. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsAddingReaction(false);
-    }
-  };
+        const { data: prototype, error: prototypeError } = await supabase
+          .from("prototypes")
+          .select("name")
+          .eq("id", comment.prototype_id)
+          .single();
 
-  const removeReaction = async (reactionId: string) => {
-    try {
-      setIsAddingReaction(true);
-      
-      const { error } = await supabase
-        .from('prototype_reactions')
-        .delete()
-        .eq('id', reactionId);
+        if (prototypeError) throw prototypeError;
 
-      if (error) throw error;
+        const { error } = await supabase
+          .from("prototype_feedback")
+          .update({ resolved: true, resolved_by: currentUserId })
+          .eq("id", commentId);
 
-      toast({
-        title: "Reaction removed",
-        description: "Your reaction has been removed."
-      });
+        if (error) throw error;
 
-      refetchFeedback();
-    } catch (error) {
-      console.error("Error removing reaction:", error);
-      toast({
-        title: "Error",
-        description: "Failed to remove reaction. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsAddingReaction(false);
-    }
-  };
+        // Notify comment owner if the resolver is not the owner
+        if (comment.created_by !== currentUserId) {
+          await notifyCommentResolved(
+            comment.created_by,
+            currentUserId,
+            prototypeId,
+            prototype.name,
+            commentId
+          );
+        }
 
-  const getReactions = async (feedbackId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('prototype_reactions')
-        .select('*')
-        .eq('feedback_id', feedbackId);
+        queryClient.invalidateQueries({ queryKey: ["prototype-feedback"] });
+        toast({
+          title: "Feedback Resolved",
+          description: "Feedback has been resolved successfully",
+        });
 
-      if (error) throw error;
-
-      return (data || []) as unknown as PrototypeReaction[];
-    } catch (error) {
-      console.error("Error fetching reactions:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch reactions. Please try again.",
-        variant: "destructive"
-      });
-      return [];
-    }
-  };
-
-  const toggleReaction = async (feedbackId: string, reactionType: string) => {
-    try {
-      const { data: sessionData } = await supabaseAuthWrapper.getSession();
-      if (!sessionData?.session?.user?.id) {
-        throw new Error("User not authenticated");
+        return true;
+      } catch (error: any) {
+        console.error("Error resolving feedback:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to resolve feedback",
+          variant: "destructive",
+        });
+        return false;
+      } finally {
+        setIsSubmitting(false);
       }
+    },
+    [supabase, currentUserId, toast, queryClient, prototypeId]
+  );
 
-      const { error } = await supabase
-        .from('prototype_reactions')
-        .update({ reaction_type: reactionType })
-        .eq('feedback_id', feedbackId);
+  const unresolveFeedback = useCallback(
+    async (commentId: string) => {
+      setIsSubmitting(true);
 
-      if (error) throw error;
+      try {
+        const { error } = await supabase
+          .from("prototype_feedback")
+          .update({ resolved: false, resolved_by: null })
+          .eq("id", commentId);
 
-      toast({
-        title: "Reaction toggled",
-        description: "Your reaction has been updated."
-      });
+        if (error) throw error;
 
-      refetchFeedback();
-    } catch (error) {
-      console.error("Error toggling reaction:", error);
-      toast({
-        title: "Error",
-        description: "Failed to toggle reaction. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
+        queryClient.invalidateQueries({ queryKey: ["prototype-feedback"] });
+        toast({
+          title: "Feedback Unresolved",
+          description: "Feedback has been unresolved successfully",
+        });
+
+        return true;
+      } catch (error: any) {
+        console.error("Error unresolving feedback:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to unresolve feedback",
+          variant: "destructive",
+        });
+        return false;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [supabase, toast, queryClient]
+  );
+
+  const deleteFeedback = useCallback(
+    async (commentId: string) => {
+      setIsSubmitting(true);
+
+      try {
+        const { error } = await supabase
+          .from("prototype_feedback")
+          .delete()
+          .eq("id", commentId);
+
+        if (error) throw error;
+
+        queryClient.invalidateQueries({ queryKey: ["prototype-feedback"] });
+        toast({
+          title: "Feedback Deleted",
+          description: "Feedback has been deleted successfully",
+        });
+
+        return true;
+      } catch (error: any) {
+        console.error("Error deleting feedback:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to delete feedback",
+          variant: "destructive",
+        });
+        return false;
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [supabase, toast, queryClient]
+  );
 
   return {
-    feedbackItems,
-    isLoadingFeedback,
-    isAddingFeedback,
-    isAddingReaction,
-    isUpdatingFeedback,
-    isResolvingFeedback,
-    isAuthenticated,
+    isSubmitting,
+    isFeedbackEnabled,
+    setIsFeedbackEnabled,
+    selectedFeedback,
+    setSelectedFeedback,
+    enableFeedback,
+    disableFeedback,
     addFeedback,
-    updateFeedback: updateFeedback,
-    resolveFeedback: resolveFeedback,
-    addReaction: addReaction,
-    removeReaction: removeReaction,
-    getReactions: getReactions,
-    checkUserPermission: checkUserPermission
+    addReply,
+    resolveFeedback,
+    unresolveFeedback,
+    deleteFeedback,
   };
 }

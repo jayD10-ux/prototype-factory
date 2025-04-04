@@ -4,12 +4,12 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { supabase } from "@/integrations/supabase/client";
-import supabaseAuthWrapper from "@/integrations/supabase/auth-wrapper";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Check, AlertTriangle } from "lucide-react";
 import JSZip from 'jszip';
+import { useSupabase } from "@/lib/supabase-provider";
+import { useClerkAuth } from "@/lib/clerk-provider";
 
 interface AddPrototypeDialogProps {
   open: boolean;
@@ -26,6 +26,8 @@ export function AddPrototypeDialog({ open, onOpenChange }: AddPrototypeDialogPro
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { supabase } = useSupabase();
+  const { user, isLoaded } = useClerkAuth();
 
   const validateHtmlFile = async (file: File): Promise<boolean> => {
     setFileValidationStatus('validating');
@@ -143,17 +145,10 @@ export function AddPrototypeDialog({ open, onOpenChange }: AddPrototypeDialogPro
     }
 
     setIsUploading(true);
-    setUploadStep("Getting session...");
+    setUploadStep("Checking authentication...");
     
     try {
-      const { data } = await supabaseAuthWrapper.getSession();
-      console.log('Auth Session:', { 
-        hasSession: !!data.session,
-        userId: data.session?.user?.id,
-        sessionError: !data.session 
-      });
-
-      if (!data.session?.user) {
+      if (!isLoaded || !user) {
         toast({
           title: 'Error',
           description: 'Please sign in to upload prototypes',
@@ -166,14 +161,14 @@ export function AddPrototypeDialog({ open, onOpenChange }: AddPrototypeDialogPro
       setUploadStep("Creating prototype entry...");
       console.log('Creating prototype:', { 
         name: name.trim(),
-        userId: data.session.user.id 
+        userId: user.id 
       });
 
       const { data: prototype, error: prototypeError } = await supabase
         .from('prototypes')
         .insert({
           name: name.trim(),
-          created_by: data.session.user.id,
+          created_by: user.id,
           url: 'pending',
           deployment_status: 'processing',
           figma_url: figmaUrl.trim() || null

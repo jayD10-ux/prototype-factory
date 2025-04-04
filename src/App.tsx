@@ -1,168 +1,66 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import { Toaster } from "@/components/ui/toaster";
+import Index from "@/pages/Index";
+import Auth from "@/pages/Auth";
 import { PrototypeDetail } from "@/components/PrototypeDetail";
-import { useClerkAuth } from "./lib/clerk-provider";
-import { EnvironmentBadge } from "./components/environment-badge";
-import Onboarding from "./pages/Onboarding";
-import { NovuNotificationProvider } from "./components/notification/novu-provider";
-import SharedPrototype from './pages/SharedPrototype';
-import { SignIn, SignUp } from "@clerk/clerk-react";
-import { fixSandpackPreviewError } from "./components/SandpackPreview";
+import SharedPrototype from "@/pages/SharedPrototype";
+import NotFound from "@/pages/NotFound";
+import { ThemeProvider } from "./components/ui/theme-provider";
+import { ClerkAuthProvider } from "./lib/clerk-provider";
 import { SupabaseProvider } from "./lib/supabase-provider";
+import { SignIn, SignUp, ClerkProvider } from "@clerk/clerk-react";
+import { NovuProvider } from "./components/notification/novu-provider";
+import Onboarding from "./pages/Onboarding";
 
+// Import this for compatibility with existing code
+// This will be phased out as we migrate to useSupabase hook
+import { supabase } from "./integrations/supabase/client";
+
+// Create a client for React Query
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: import.meta.env.PROD, // Only refetch on window focus in production
+      retry: 1, // Only retry failed queries once
     },
   },
 });
 
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-  skipOnboardingCheck?: boolean;
-}
-
-const NavigationWrapper = ({ children }: { children: React.ReactNode }) => {
-  fixSandpackPreviewError();
-  return <>{children}</>;
-};
-
-const ProtectedRoute = ({ children, skipOnboardingCheck = false }: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading, user } = useClerkAuth();
-  const [needsOnboarding, setNeedsOnboarding] = useState(false);
-  const location = useLocation();
-
+export default function App() {
+  // Log environment variables on startup for debugging
   useEffect(() => {
-    if (!isLoading && !skipOnboardingCheck && user) {
-      const checkProfileCompletion = async () => {
-        try {
-          const { data } = await supabase
-            .from('profiles')
-            .select('name')
-            .eq('clerk_id', user.id)
-            .maybeSingle();
-          
-          setNeedsOnboarding(!data?.name);
-        } catch (error) {
-          console.error('Error checking profile:', error);
-          setNeedsOnboarding(true);
-        }
-      };
-      
-      checkProfileCompletion();
-    }
-  }, [isLoading, user, skipOnboardingCheck]);
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-foreground"></div>
-          <p className="text-sm text-muted-foreground">Loading application...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    localStorage.setItem('redirectAfterLogin', location.pathname);
-    return <Navigate to="/sign-in" replace />;
-  }
-
-  if (needsOnboarding && !skipOnboardingCheck) {
-    return <Navigate to="/onboarding" replace />;
-  }
-
-  return children;
-};
-
-const AppRoutes = () => {
-  const { isAuthenticated, isLoading } = useClerkAuth();
-  const [initialized, setInitialized] = useState(false);
-  
-  useEffect(() => {
-    setInitialized(true);
+    const environment = import.meta.env.VITE_ENVIRONMENT || "development";
+    console.log(`Running in ${environment} environment`);
   }, []);
-  
-  if (!initialized || isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-foreground"></div>
-          <p className="text-sm text-muted-foreground">Initializing application...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <NavigationWrapper>
-      <SupabaseProvider>
-        <Routes>
-          <Route path="/sign-in/*" element={<SignIn routing="path" path="/sign-in" />} />
-          <Route path="/sign-up/*" element={<SignUp routing="path" path="/sign-up" />} />
-          <Route
-            path="/onboarding"
-            element={
-              <ProtectedRoute skipOnboardingCheck={true}>
-                <Onboarding />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/"
-            element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/sign-in" />}
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <NovuNotificationProvider>
-                  <Index />
-                </NovuNotificationProvider>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/prototype/:id"
-            element={
-              <ProtectedRoute>
-                <NovuNotificationProvider>
-                  <PrototypeDetail />
-                </NovuNotificationProvider>
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/p/:id" element={<SharedPrototype />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </SupabaseProvider>
-      <Toaster />
-      <Sonner />
-      <EnvironmentBadge />
-    </NavigationWrapper>
-  );
-};
-
-function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ClerkProvider>
+      <ThemeProvider defaultTheme="light" storageKey="theme">
+        <ClerkAuthProvider>
+          <SupabaseProvider>
+            <QueryClientProvider client={queryClient}>
+              <NovuProvider>
+                <Router>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/sign-in/*" element={<SignIn routing="path" path="/sign-in" />} />
+                    <Route path="/sign-up/*" element={<SignUp routing="path" path="/sign-up" />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/onboarding" element={<Onboarding />} />
+                    <Route path="/prototype/:id" element={<PrototypeDetail />} />
+                    <Route path="/share/:id/:shareId" element={<SharedPrototype />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Router>
+              </NovuProvider>
+              <Toaster />
+            </QueryClientProvider>
+          </SupabaseProvider>
+        </ClerkAuthProvider>
+      </ThemeProvider>
+    </ClerkProvider>
   );
 }
-
-export default App;

@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Prototype } from "@/types/prototype";
 import { useSupabase } from "@/lib/supabase-provider";
+import { useClerkAuth } from "@/lib/clerk-provider";
 import { PrototypeShare } from "@/types/prototype-sharing";
 
 export function usePrototypeData(
@@ -12,9 +12,10 @@ export function usePrototypeData(
   collectionId: string | null,
   sharedWithMe: boolean = false
 ) {
-  const { session } = useSupabase();
+  const { supabase, session } = useSupabase();
+  const { user } = useClerkAuth();
   const { toast } = useToast();
-  const userId = session?.user?.id;
+  const userId = user?.id;
 
   // Query for prototype data
   const {

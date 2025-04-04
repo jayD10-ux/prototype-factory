@@ -1,7 +1,5 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { AddPrototypeDialog } from "./add-prototype-dialog";
 import { PrototypeCollections } from "./prototype/collection/PrototypeCollections";
 import { PrototypeToolbar } from "./prototype/PrototypeToolbar";
@@ -15,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileAvatar } from "./profile/profile-avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSupabase } from "@/lib/supabase-provider";
+import { useClerkAuth } from "@/lib/clerk-provider";
 
 export const PrototypeGrid = () => {
   // State for view, sort, search and selection
@@ -26,7 +25,8 @@ export const PrototypeGrid = () => {
   const [isAddToCollectionDialogOpen, setIsAddToCollectionDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"my" | "shared">("my");
   
-  const { session } = useSupabase();
+  const { supabase } = useSupabase();
+  const { user } = useClerkAuth();
   const { toast } = useToast();
 
   // Query for collections with counts

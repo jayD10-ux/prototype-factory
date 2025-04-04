@@ -1,43 +1,34 @@
 
-import { NovuProvider } from "@novu/notification-center";
-import { useSupabase } from "@/lib/supabase-provider";
-import { useNavigate } from "react-router-dom";
-import React from "react";
+// Update the Novu provider to use Clerk authentication
+import { FC, ReactNode, useEffect } from "react";
+import { NovuProvider as ExternalNovuProvider } from "@novu/react";
 import { useClerkAuth } from "@/lib/clerk-provider";
+import { useSupabase } from "@/lib/supabase-provider";
 
-interface NovuNotificationProviderProps {
-  children: React.ReactNode;
+interface NovuProviderProps {
+  children: ReactNode;
 }
 
-export function NovuNotificationProvider({ children }: NovuNotificationProviderProps) {
-  const { session } = useSupabase();
-  const { user: clerkUser } = useClerkAuth();
-  const navigate = useNavigate();
+export const NovuProvider: FC<NovuProviderProps> = ({ children }) => {
+  const { user, isAuthenticated, isLoading } = useClerkAuth();
   
-  // Application identifier from your Novu dashboard
-  const applicationIdentifier = "pGu4iA9YYPiQ"; // This is from your supabase/functions/send-notification/index.ts
+  // No longer need session from Supabase since we're using Clerk
+  const { supabase } = useSupabase();
   
-  // Get user ID from either Supabase session or Clerk
-  const userId = session?.user?.id || clerkUser?.id;
-  
-  // Only provide Novu context if the user is logged in
-  if (!userId) {
+  // If Novu is configured with an application ID, use it, otherwise default to empty string
+  const NOVU_APP_ID = import.meta.env.VITE_NOVU_APP_ID || "";
+
+  if (!isAuthenticated || isLoading || !user) {
     return <>{children}</>;
   }
-  
+
   return (
-    <NovuProvider
-      applicationIdentifier={applicationIdentifier}
-      subscriberId={userId}
-      backendUrl="https://api.novu.co"
-      socketUrl="https://ws.novu.co"
-      i18n="en"
-      onLoad={() => {
-        console.log("Novu loaded successfully");
-      }}
-      subscriberHash={undefined} // Add a hash if your backend provides one for security
+    <ExternalNovuProvider
+      applicationIdentifier={NOVU_APP_ID}
+      subscriberId={user.id}
+      subscriberHash=""
     >
       {children}
-    </NovuProvider>
+    </ExternalNovuProvider>
   );
-}
+};

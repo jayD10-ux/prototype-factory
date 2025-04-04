@@ -7,16 +7,18 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 // We need to explicitly define the auth-related types since we're having issues with imports
 export interface User {
   id: string;
-  app_metadata: {
+  app_metadata?: {
     provider?: string;
     [key: string]: any;
   };
-  user_metadata: {
+  user_metadata?: {
     [key: string]: any;
   };
-  aud: string;
+  aud?: string;
   email?: string;
   phone?: string;
+  name?: string;
+  avatar_url?: string;
   created_at: string;
   confirmed_at?: string;
   last_sign_in_at?: string;

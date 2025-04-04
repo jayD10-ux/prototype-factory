@@ -1,13 +1,21 @@
 
 'use client';
 
-import { createContext, useContext, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth, useUser } from '@clerk/clerk-react';
+import { createContext, useContext } from 'react';
+import { useSupabaseWithClerk } from '@/hooks/use-supabase-with-clerk';
+import { useUser } from '@clerk/clerk-react';
+import { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/integrations/supabase/types';
 
 interface SupabaseContextType {
-  supabase: typeof supabase;
+  supabase: SupabaseClient<Database>;
   isAuthenticated: boolean;
+  session: {
+    user: {
+      id: string;
+      email?: string;
+    };
+  } | null;
 }
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
@@ -17,16 +25,24 @@ export interface SupabaseProviderProps {
 }
 
 export function SupabaseProvider({ children }: SupabaseProviderProps) {
-  const { isSignedIn } = useAuth();
-  
-  // Provide the client to children without any auth-related state
-  const value = {
-    supabase,
-    isAuthenticated: !!isSignedIn,
-  };
+  const { supabase, isAuthenticated } = useSupabaseWithClerk();
+  const { user, isLoaded } = useUser();
+
+  // Create a session-like object from Clerk user data
+  // This maintains compatibility with code that expects supabase.auth.session
+  const session = isLoaded && user ? {
+    user: {
+      id: user.id,
+      email: user.primaryEmailAddress?.emailAddress
+    }
+  } : null;
 
   return (
-    <SupabaseContext.Provider value={value}>
+    <SupabaseContext.Provider value={{ 
+      supabase,
+      isAuthenticated,
+      session
+    }}>
       {children}
     </SupabaseContext.Provider>
   );

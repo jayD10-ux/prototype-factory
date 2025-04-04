@@ -1,14 +1,13 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { PreviewWindow } from "./PreviewWindow";
 import { ShareDialog } from "./prototype/sharing/ShareDialog";
 import { useToast } from "@/hooks/use-toast";
 import { RefreshCw, AlertTriangle, User } from "lucide-react";
 import { Button } from "./ui/button";
 import { useSupabase } from "@/lib/supabase-provider";
+import { useClerkAuth } from "@/lib/clerk-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { PrototypeShare } from "@/types/prototype-sharing";
 
@@ -18,9 +17,10 @@ export const PrototypeDetail = () => {
   const navigate = useNavigate();
   const [processingTimeout, setProcessingTimeout] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
-  const { session } = useSupabase();
+  const { supabase, session } = useSupabase();
+  const { user } = useClerkAuth();
   
-  const currentUserId = session?.user?.id;
+  const currentUserId = user?.id;
 
   const { 
     data: prototype, 
@@ -80,10 +80,10 @@ export const PrototypeDetail = () => {
   });
 
   useEffect(() => {
-    if (!session && !isLoading) {
+    if (!user && !isLoading) {
       navigate('/auth');
     }
-  }, [session, isLoading, navigate]);
+  }, [user, isLoading, navigate]);
 
   const handleShare = useCallback(() => {
     setShowShareDialog(true);
