@@ -7,7 +7,12 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJ
 
 // Create a basic client without auth configuration for compatibility with existing code
 // This will be used when no authentication is available
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+});
 
 // Create a client with custom auth configuration
 export const createSupabaseClient = (options?: {
@@ -22,6 +27,10 @@ export const createSupabaseClient = (options?: {
   return createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: {
       headers,
+    },
+    auth: {
+      persistSession: false, // We're using Clerk to manage the session
+      autoRefreshToken: false, // We'll handle token refresh with Clerk
     },
   });
 };

@@ -11,12 +11,12 @@ export function usePrototypeFeedback(prototypeId: string) {
   const [isFeedbackEnabled, setIsFeedbackEnabled] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<any | null>(null);
   
-  const { supabase } = useSupabase();
+  const { supabase, clerkId } = useSupabase();
   const { user } = useClerkAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const currentUserId = user?.id;
+  const currentUserId = user?.id; // This is the Clerk ID
 
   const enableFeedback = useCallback(async () => {
     setIsSubmitting(true);
@@ -72,7 +72,7 @@ export function usePrototypeFeedback(prototypeId: string) {
     }
   }, [supabase, prototypeId, toast]);
   
-  // Example of how to update all the methods that used supabaseAuthWrapper.getSession() previously:
+  // Example of how to update methods to use clerk_id
   const addFeedback = useCallback(async (feedbackData: any) => {
     if (!currentUserId) {
       toast({
@@ -88,7 +88,7 @@ export function usePrototypeFeedback(prototypeId: string) {
     try {
       const { data: prototype, error: prototypeError } = await supabase
         .from("prototypes")
-        .select("created_by, name")
+        .select("created_by, clerk_id, name")
         .eq("id", prototypeId)
         .single();
 
@@ -99,7 +99,8 @@ export function usePrototypeFeedback(prototypeId: string) {
         .insert({
           ...feedbackData,
           prototype_id: prototypeId,
-          created_by: currentUserId,
+          created_by: currentUserId, // This is still expected as UUID
+          clerk_id: currentUserId, // Add the clerk_id
         })
         .select()
         .single();
@@ -107,9 +108,9 @@ export function usePrototypeFeedback(prototypeId: string) {
       if (error) throw error;
 
       // Notify prototype owner if the commenter is not the owner
-      if (prototype.created_by !== currentUserId) {
+      if (prototype.clerk_id !== currentUserId) {
         await notifyNewComment(
-          prototype.created_by,
+          prototype.created_by, // Use legacy field for now
           currentUserId,
           prototypeId,
           prototype.name,

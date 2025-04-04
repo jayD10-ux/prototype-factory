@@ -17,7 +17,7 @@ export const PrototypeDetail = () => {
   const navigate = useNavigate();
   const [processingTimeout, setProcessingTimeout] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
-  const { supabase, session } = useSupabase();
+  const { supabase, clerkId } = useSupabase();
   const { user } = useClerkAuth();
   
   const currentUserId = user?.id;
@@ -47,13 +47,13 @@ export const PrototypeDetail = () => {
       }
 
       // Check if prototype is shared with the current user
-      if (data && currentUserId && data.created_by !== currentUserId) {
+      if (data && currentUserId && data.clerk_id !== currentUserId) {
         // Check if user has access via share
         const { data: shareData, error: shareError } = await supabase
           .from('prototype_shares' as any)
           .select('*')
           .eq('prototype_id', id)
-          .or(`email.eq.${session?.user?.email},is_public.eq.true`);
+          .or(`email.eq.${user?.primaryEmailAddress?.emailAddress},is_public.eq.true`);
         
         if (shareError || !shareData || shareData.length === 0) {
           toast({
@@ -132,7 +132,7 @@ export const PrototypeDetail = () => {
   }
 
   // Check if current user is the creator of the prototype
-  const isCreator = currentUserId === prototype.created_by;
+  const isCreator = currentUserId === prototype.clerk_id;
   const creatorName = prototype.profiles?.name || 'Anonymous';
   const creatorAvatar = prototype.profiles?.avatar_url;
 

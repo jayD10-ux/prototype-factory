@@ -6,7 +6,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/integrations/supabase/types';
 
 export function useSupabaseWithClerk() {
-  const { getToken, isSignedIn } = useAuth();
+  const { getToken, isSignedIn, userId } = useAuth();
   const [client, setClient] = useState<SupabaseClient<Database>>(defaultClient);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -43,6 +43,7 @@ export function useSupabaseWithClerk() {
   return { 
     supabase: client, 
     isLoading, 
-    isAuthenticated: isSignedIn 
+    isAuthenticated: isSignedIn,
+    clerkId: userId, // Add clerkId for convenience
   };
 }

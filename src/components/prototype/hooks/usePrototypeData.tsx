@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -12,10 +13,10 @@ export function usePrototypeData(
   collectionId: string | null,
   sharedWithMe: boolean = false
 ) {
-  const { supabase, session } = useSupabase();
+  const { supabase, clerkId } = useSupabase();
   const { user } = useClerkAuth();
   const { toast } = useToast();
-  const userId = user?.id;
+  const userId = user?.id; // This is the Clerk ID
 
   // Query for prototype data
   const {
@@ -33,7 +34,7 @@ export function usePrototypeData(
           const { data: sharedPrototypeIds, error: sharedError } = await supabase
             .from('prototype_shares' as any)
             .select("prototype_id")
-            .eq("email", session?.user?.email)
+            .eq("email", user?.primaryEmailAddress?.emailAddress) // Use email for now since we're transitioning
             .eq("is_link_share", false);
             
           if (sharedError) throw sharedError;
@@ -78,7 +79,7 @@ export function usePrototypeData(
               *,
               profiles:created_by(name, avatar_url)
             `)
-            .eq('created_by', userId);
+            .eq('clerk_id', userId); // Use clerk_id instead of created_by
 
           // Apply collection filter if a collection is selected
           if (collectionId) {

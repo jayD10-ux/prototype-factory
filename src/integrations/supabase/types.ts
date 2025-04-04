@@ -38,6 +38,7 @@ export type Database = {
       }
       comments: {
         Row: {
+          clerk_id: string | null
           content: string
           created_at: string
           created_by: string
@@ -49,6 +50,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          clerk_id?: string | null
           content: string
           created_at?: string
           created_by: string
@@ -60,6 +62,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          clerk_id?: string | null
           content?: string
           created_at?: string
           created_by?: string
@@ -136,6 +139,7 @@ export type Database = {
       notifications: {
         Row: {
           actor_id: string | null
+          clerk_id: string | null
           comment_id: string | null
           content: string
           created_at: string
@@ -150,6 +154,7 @@ export type Database = {
         }
         Insert: {
           actor_id?: string | null
+          clerk_id?: string | null
           comment_id?: string | null
           content: string
           created_at?: string
@@ -164,6 +169,7 @@ export type Database = {
         }
         Update: {
           actor_id?: string | null
+          clerk_id?: string | null
           comment_id?: string | null
           content?: string
           created_at?: string
@@ -409,6 +415,7 @@ export type Database = {
       prototype_shares: {
         Row: {
           accessed_at: string | null
+          clerk_id: string | null
           created_at: string
           email: string | null
           id: string
@@ -420,6 +427,7 @@ export type Database = {
         }
         Insert: {
           accessed_at?: string | null
+          clerk_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -431,6 +439,7 @@ export type Database = {
         }
         Update: {
           accessed_at?: string | null
+          clerk_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -483,6 +492,7 @@ export type Database = {
       prototypes: {
         Row: {
           bundle_path: string | null
+          clerk_id: string | null
           created_at: string
           created_by: string
           deployment_metadata: Json | null
@@ -506,6 +516,7 @@ export type Database = {
         }
         Insert: {
           bundle_path?: string | null
+          clerk_id?: string | null
           created_at?: string
           created_by: string
           deployment_metadata?: Json | null
@@ -529,6 +540,7 @@ export type Database = {
         }
         Update: {
           bundle_path?: string | null
+          clerk_id?: string | null
           created_at?: string
           created_by?: string
           deployment_metadata?: Json | null

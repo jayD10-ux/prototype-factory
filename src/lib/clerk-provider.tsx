@@ -34,7 +34,7 @@ export function ClerkAuthProvider({ children }: ClerkProviderProps) {
       if (clerkUser && userId) {
         // Create a user object that matches the structure expected by the app
         setUser({
-          id: userId,
+          id: userId, // This is the Clerk ID now used in clerk_id columns
           email: clerkUser.primaryEmailAddress?.emailAddress || '',
           name: clerkUser.fullName || clerkUser.firstName || '',
           avatar_url: clerkUser.imageUrl || undefined,

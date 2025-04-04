@@ -4,24 +4,52 @@ import { useClerk, useAuth, useUser } from '@clerk/clerk-react';
 
 /**
  * This adapter ensures that Supabase client can be used with Clerk auth
- * In the future, we will set up JWT token passing from Clerk to Supabase
+ * It passes JWT tokens from Clerk to Supabase
  */
 export function useSupabaseWithClerkAuth() {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, getToken } = useAuth();
   const { user } = useUser();
+  
+  const getSupabaseWithAuth = async () => {
+    if (!isSignedIn) return supabase;
+    
+    const token = await getToken({ template: 'supabase' });
+    if (!token) return supabase;
+    
+    return supabase.auth.setSession({
+      access_token: token,
+      refresh_token: '', // Not needed with Clerk's token
+    });
+  };
   
   return {
     user,
     isAuthenticated: isSignedIn,
-    supabase
+    getSupabaseWithAuth
   };
 }
 
 /**
- * In the future, this function will set up JWT authentication between Clerk and Supabase
+ * Gets a Supabase client with Clerk JWT authentication 
  */
 export async function authorizedSupabaseClient() {
-  // For now, just return the regular client
-  // In phase 2, we will implement JWT token passing
-  return supabase;
+  const clerk = window.Clerk;
+  if (!clerk || !clerk.session) {
+    return supabase;
+  }
+  
+  try {
+    const token = await clerk.session.getToken({ template: 'supabase' });
+    if (!token) return supabase;
+    
+    const { data } = await supabase.auth.setSession({
+      access_token: token,
+      refresh_token: '',
+    });
+    
+    return data.session ? supabase : supabase;
+  } catch (error) {
+    console.error('Error getting authorized Supabase client:', error);
+    return supabase;
+  }
 }

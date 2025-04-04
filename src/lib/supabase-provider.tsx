@@ -12,10 +12,11 @@ interface SupabaseContextType {
   isAuthenticated: boolean;
   session: {
     user: {
-      id: string;
+      id: string; // This will now be the Clerk ID
       email?: string;
     };
   } | null;
+  clerkId: string | null | undefined; // New field to explicitly expose Clerk ID
 }
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
@@ -25,14 +26,14 @@ export interface SupabaseProviderProps {
 }
 
 export function SupabaseProvider({ children }: SupabaseProviderProps) {
-  const { supabase, isAuthenticated } = useSupabaseWithClerk();
+  const { supabase, isAuthenticated, clerkId } = useSupabaseWithClerk();
   const { user, isLoaded } = useUser();
 
   // Create a session-like object from Clerk user data
   // This maintains compatibility with code that expects supabase.auth.session
   const session = isLoaded && user ? {
     user: {
-      id: user.id,
+      id: user.id, // Clerk ID
       email: user.primaryEmailAddress?.emailAddress
     }
   } : null;
@@ -41,7 +42,8 @@ export function SupabaseProvider({ children }: SupabaseProviderProps) {
     <SupabaseContext.Provider value={{ 
       supabase,
       isAuthenticated,
-      session
+      session,
+      clerkId
     }}>
       {children}
     </SupabaseContext.Provider>

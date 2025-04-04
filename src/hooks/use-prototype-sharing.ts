@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSupabase } from "@/lib/supabase-provider";
@@ -6,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export function usePrototypeSharing() {
   const [isLoading, setIsLoading] = useState(false);
-  const { supabase } = useSupabase();
+  const { supabase, clerkId } = useSupabase();
   const { user } = useClerkAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -27,14 +28,14 @@ export function usePrototypeSharing() {
         // Check if the prototype exists and the user has permission to share it
         const { data: prototype, error: prototypeError } = await supabase
           .from("prototypes")
-          .select("id, name, created_by")
+          .select("id, name, created_by, clerk_id")
           .eq("id", prototypeId)
           .single();
 
         if (prototypeError) throw prototypeError;
 
         // Only the creator can share the prototype
-        if (prototype.created_by !== user.id) {
+        if (prototype.clerk_id !== user.id) {
           throw new Error("You don't have permission to share this prototype");
         }
 
@@ -65,7 +66,8 @@ export function usePrototypeSharing() {
             .from("prototype_shares")
             .insert({
               prototype_id: prototypeId,
-              shared_by: user.id,
+              shared_by: user.id, // UUID legacy field
+              clerk_id: user.id, // New clerk_id field
               email: email.toLowerCase(),
               permission,
               is_link_share: false,
