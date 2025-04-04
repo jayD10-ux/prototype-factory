@@ -17,6 +17,11 @@ export const NovuProvider: FC<NovuProviderProps> = ({ children }) => {
   // If Novu is configured with an application ID, use it, otherwise default to empty string
   const NOVU_APP_ID = import.meta.env.VITE_NOVU_APP_ID || "";
   
+  useEffect(() => {
+    // Log initialization instead of using onInit prop
+    console.log("Novu provider initialized");
+  }, []);
+  
   // Always wrap in NovuProvider, even for anonymous users, to avoid rendering errors
   // This ensures the notification context is always available
   return (
@@ -25,10 +30,6 @@ export const NovuProvider: FC<NovuProviderProps> = ({ children }) => {
       subscriberId={isAuthenticated && user ? user.id : "anonymous-user"}
       // Only provide subscriber hash if authenticated
       subscriberHash=""
-      // Add backoff strategy for error handling
-      onInit={() => {
-        console.log("Novu provider initialized");
-      }}
     >
       {children}
     </ExternalNovuProvider>
