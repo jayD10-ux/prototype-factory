@@ -1,6 +1,5 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import type { User } from '@/types/supabase';
 
@@ -13,7 +12,7 @@ interface ClerkContextType {
   } | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  isLoaded: boolean; // Added isLoaded property
+  isLoaded: boolean;
 }
 
 const ClerkContext = createContext<ClerkContextType | undefined>(undefined);
@@ -27,37 +26,55 @@ export function ClerkAuthProvider({ children }: ClerkProviderProps) {
   const { user: clerkUser, isLoaded: isUserLoaded } = useUser();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
 
   // Convert Clerk user to a format compatible with our existing app
   useEffect(() => {
     if (isClerkLoaded && isUserLoaded) {
-      if (clerkUser && userId) {
-        // Create a user object that matches the structure expected by the app
-        setUser({
-          id: userId, // This is the Clerk ID now used in clerk_id columns
-          email: clerkUser.emailAddresses?.[0]?.emailAddress || '',
-          name: clerkUser.fullName || clerkUser.firstName || '',
-          avatar_url: clerkUser.imageUrl || undefined,
-          created_at: clerkUser.createdAt ? new Date(clerkUser.createdAt).toISOString() : new Date().toISOString()
-        });
-      } else {
+      try {
+        if (clerkUser && userId) {
+          // Create a user object that matches the structure expected by the app
+          setUser({
+            id: userId, 
+            email: clerkUser.emailAddresses?.[0]?.emailAddress || '',
+            name: clerkUser.fullName || clerkUser.firstName || '',
+            avatar_url: clerkUser.imageUrl || undefined,
+            created_at: clerkUser.createdAt ? new Date(clerkUser.createdAt).toISOString() : new Date().toISOString()
+          });
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Error setting user data:', error);
         setUser(null);
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     }
   }, [clerkUser, userId, isClerkLoaded, isUserLoaded]);
-
-  const isAuthenticated = !!userId && isSignedIn;
 
   // Provide the auth state to children
   const value = {
     user,
     isLoading,
-    isAuthenticated,
-    isLoaded: isClerkLoaded && isUserLoaded, // Add isLoaded for component usage
+    isAuthenticated: !!userId && !!isSignedIn,
+    isLoaded: isClerkLoaded && isUserLoaded,
   };
+
+  // Return placeholder during initial load to prevent rendering errors
+  if (!isClerkLoaded || !isUserLoaded) {
+    return (
+      <ClerkContext.Provider 
+        value={{
+          user: null,
+          isLoading: true,
+          isAuthenticated: false,
+          isLoaded: false
+        }}
+      >
+        {children}
+      </ClerkContext.Provider>
+    );
+  }
 
   return (
     <ClerkContext.Provider value={value}>

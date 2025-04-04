@@ -14,15 +14,20 @@ import { ProfileUpdateForm } from "@/components/profile/profile-update-form";
 import { useClerkAuth } from "@/lib/clerk-provider";
 
 export default function Onboarding() {
-  const { user: clerkUser, isAuthenticated } = useClerkAuth();
+  const { user: clerkUser, isAuthenticated, isLoaded } = useClerkAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     const checkProfileCompletion = async () => {
+      // Wait for Clerk to initialize
+      if (!isLoaded) {
+        return;
+      }
+
       if (!isAuthenticated || !clerkUser) {
-        navigate('/sign-in');
+        navigate('/');
         return;
       }
 
@@ -35,7 +40,7 @@ export default function Onboarding() {
         
         console.log("Checking profile for Clerk ID:", clerkId);
         
-        // Try to find profile using clerk_id - we've updated our DB to properly index this
+        // Try to find profile using clerk_id
         const { data, error } = await supabase
           .from('profiles')
           .select('name')
@@ -66,9 +71,10 @@ export default function Onboarding() {
     };
 
     checkProfileCompletion();
-  }, [clerkUser, isAuthenticated, navigate, toast]);
+  }, [clerkUser, isAuthenticated, navigate, toast, isLoaded]);
 
-  if (isLoading) {
+  // Show a loading state until we know what to do
+  if (!isLoaded || isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
@@ -77,6 +83,11 @@ export default function Onboarding() {
         </div>
       </div>
     );
+  }
+
+  // If not authenticated, don't show anything (navigation happens in useEffect)
+  if (!isAuthenticated || !clerkUser) {
+    return null;
   }
 
   return (
