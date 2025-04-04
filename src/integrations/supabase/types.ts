@@ -598,6 +598,10 @@ export type Database = {
         }
         Returns: Json
       }
+      get_clerk_user_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_current_clerk_user: {
         Args: {
           _table_clerk_id: string
