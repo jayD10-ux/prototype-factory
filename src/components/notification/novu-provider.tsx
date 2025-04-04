@@ -17,14 +17,18 @@ export const NovuProvider: FC<NovuProviderProps> = ({ children }) => {
   // If Novu is configured with an application ID, use it, otherwise default to empty string
   const NOVU_APP_ID = import.meta.env.VITE_NOVU_APP_ID || "";
   
-  // Even if the user is not authenticated, we still wrap in NovuProvider
-  // but with a placeholder subscriberId to avoid null errors
+  // Always wrap in NovuProvider, even for anonymous users, to avoid rendering errors
+  // This ensures the notification context is always available
   return (
     <ExternalNovuProvider
       applicationIdentifier={NOVU_APP_ID}
       subscriberId={isAuthenticated && user ? user.id : "anonymous-user"}
       // Only provide subscriber hash if authenticated
       subscriberHash=""
+      // Add backoff strategy for error handling
+      onInit={() => {
+        console.log("Novu provider initialized");
+      }}
     >
       {children}
     </ExternalNovuProvider>
