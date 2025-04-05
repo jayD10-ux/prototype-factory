@@ -4,21 +4,25 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { AlertCircle } from "lucide-react";
 
 export default function ValidationTestPage() {
   const [isFixing, setIsFixing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fixRlsPolicies = async () => {
     setIsFixing(true);
     setErrorMessage(null);
+    setErrorDetails(null);
     
     try {
       const { data, error } = await supabase.functions.invoke('fix-rls');
       
       if (error) {
         setErrorMessage(`Error: ${error.message}`);
+        setErrorDetails(JSON.stringify(error, null, 2));
         toast({
           variant: "destructive",
           title: "Error fixing RLS policies",
@@ -32,6 +36,7 @@ export default function ValidationTestPage() {
       }
     } catch (err: any) {
       setErrorMessage(`Error: ${err.message}`);
+      setErrorDetails(err.stack || JSON.stringify(err, null, 2));
       toast({
         variant: "destructive",
         title: "Error fixing RLS policies",
@@ -57,8 +62,19 @@ export default function ValidationTestPage() {
         
         {errorMessage && (
           <div className="bg-destructive/15 p-4 rounded-md text-sm">
-            <p className="font-semibold mb-1">Error fixing RLS policies:</p>
-            <p className="font-mono text-xs whitespace-pre-wrap">{errorMessage}</p>
+            <div className="flex items-center gap-2 font-semibold mb-1">
+              <AlertCircle className="h-4 w-4" />
+              <p>Error fixing RLS policies:</p>
+            </div>
+            <p className="font-mono text-xs whitespace-pre-wrap mb-2">{errorMessage}</p>
+            {errorDetails && (
+              <>
+                <p className="font-semibold mt-2 mb-1">Details:</p>
+                <pre className="bg-black/10 p-2 rounded text-xs overflow-x-auto">
+                  {errorDetails}
+                </pre>
+              </>
+            )}
           </div>
         )}
       </div>
