@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface PrototypeStatusBadgeProps {
-  status: 'pending' | 'processing' | 'deployed' | 'failed' | null
+  status: 'pending' | 'processing' | 'deployed' | 'completed' | 'failed' | null
 }
 
 export function PrototypeStatusBadge({ status }: PrototypeStatusBadgeProps) {
@@ -20,6 +20,7 @@ export function PrototypeStatusBadge({ status }: PrototypeStatusBadgeProps) {
         </Badge>
       )
     case 'deployed':
+    case 'completed':
       return (
         <Badge variant="default" className={cn("bg-green-500", "text-white")}>
           Live
