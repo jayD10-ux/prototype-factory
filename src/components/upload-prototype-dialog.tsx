@@ -6,7 +6,7 @@ import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Loader2, Upload } from "lucide-react";
-import { JSZip } from "jszip";
+import JSZip from "jszip"; // Changed from { JSZip } to JSZip
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";

@@ -20,100 +20,44 @@ serve(async (req) => {
 
     console.log("Running fix-rls function");
 
-    // First, drop existing potentially problematic function
-    const { error: dropFunctionError } = await supabase.rpc('execute_sql', {
+    // Drop existing RLS policies that might be causing issues
+    await supabase.rpc('execute_sql', {
       sql_query: `
-        DROP FUNCTION IF EXISTS public.user_has_prototype_access(uuid);
-      `
-    });
-
-    if (dropFunctionError) {
-      console.error("Error dropping function:", dropFunctionError);
-    }
-
-    // Create new security definer function with fixed implementation
-    const { error: functionError } = await supabase.rpc('execute_sql', {
-      sql_query: `
-        CREATE OR REPLACE FUNCTION public.user_has_prototype_access(prototype_id uuid)
-        RETURNS boolean
-        LANGUAGE plpgsql
-        SECURITY DEFINER
-        STABLE
-        AS $$
-        DECLARE
-          _clerk_id text;
-          _prototype_owner boolean;
-          _has_share boolean;
-        BEGIN
-          -- Get the current user's clerk_id
-          _clerk_id := nullif(current_setting('request.jwt.claim.sub', true), '')::text;
-          
-          -- Check if user is the prototype owner (direct check, no recursion)
-          SELECT EXISTS (
-            SELECT 1 FROM prototypes 
-            WHERE id = prototype_id AND clerk_id = _clerk_id
-          ) INTO _prototype_owner;
-          
-          IF _prototype_owner THEN
-            RETURN true;
-          END IF;
-          
-          -- Check if the prototype is shared with the user or is public
-          -- Simplified to avoid potential recursion
-          SELECT EXISTS (
-            SELECT 1 FROM prototype_shares
-            WHERE prototype_id = prototype_id 
-            AND (shared_by = _clerk_id OR is_public = true)
-          ) INTO _has_share;
-          
-          RETURN _has_share;
-        END;
-        $$;
-      `
-    });
-
-    if (functionError) {
-      throw new Error(`Failed to create function: ${functionError.message}`);
-    }
-
-    console.log("Security definer function created");
-
-    // Drop existing policies
-    const { error: dropError } = await supabase.rpc('execute_sql', {
-      sql_query: `
+        -- Drop existing policies
         DROP POLICY IF EXISTS "Users can view their own prototypes" ON public.prototypes;
         DROP POLICY IF EXISTS "Users can view shared prototypes" ON public.prototypes;
         DROP POLICY IF EXISTS "Users can update their own prototypes" ON public.prototypes;
-        DROP POLICY IF EXISTS "Users can insert their own prototypes" ON public.prototypes;
+        DROP POLICY IF EXISTS "Users can insert prototypes" ON public.prototypes;
         DROP POLICY IF EXISTS "Users can delete their own prototypes" ON public.prototypes;
+        
+        -- Make sure RLS is enabled
+        ALTER TABLE public.prototypes ENABLE ROW LEVEL SECURITY;
       `
+    }).catch(error => {
+      console.log("Error dropping policies:", error);
+      // Continue execution even if this fails
     });
 
-    if (dropError) {
-      throw new Error(`Failed to drop policies: ${dropError.message}`);
-    }
-
-    console.log("Old policies dropped");
-
-    // Create new policies with simpler conditions to avoid recursion
-    const { error: createPoliciesError } = await supabase.rpc('execute_sql', {
+    // Create new simplified policies directly
+    const { error: policiesError } = await supabase.rpc('execute_sql', {
       sql_query: `
-        -- Simple policy for viewing own prototypes
+        -- Simple policy for viewing own prototypes based on clerk_id
         CREATE POLICY "Users can view their own prototypes" 
         ON public.prototypes
         FOR SELECT 
         USING (
-          clerk_id = nullif(current_setting('request.jwt.claim.sub', true), '')::text
+          clerk_id = (SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::text)
         );
 
-        -- Simple policy for viewing shared prototypes
+        -- Simple policy for viewing shared prototypes (public ones)
         CREATE POLICY "Users can view shared prototypes" 
         ON public.prototypes
         FOR SELECT 
         USING (
           EXISTS (
             SELECT 1 FROM prototype_shares
-            WHERE prototype_id = prototypes.id AND is_public = true
+            WHERE prototype_shares.prototype_id = prototypes.id 
+            AND prototype_shares.is_public = true
           )
         );
 
@@ -122,7 +66,7 @@ serve(async (req) => {
         ON public.prototypes
         FOR UPDATE
         USING (
-          clerk_id = nullif(current_setting('request.jwt.claim.sub', true), '')::text
+          clerk_id = (SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::text)
         );
 
         -- Simple policy for inserting own prototypes
@@ -130,7 +74,7 @@ serve(async (req) => {
         ON public.prototypes
         FOR INSERT
         WITH CHECK (
-          clerk_id = nullif(current_setting('request.jwt.claim.sub', true), '')::text
+          clerk_id = (SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::text)
         );
 
         -- Simple policy for deleting own prototypes
@@ -138,33 +82,35 @@ serve(async (req) => {
         ON public.prototypes
         FOR DELETE
         USING (
-          clerk_id = nullif(current_setting('request.jwt.claim.sub', true), '')::text
+          clerk_id = (SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::text)
         );
       `
     });
 
-    if (createPoliciesError) {
-      throw new Error(`Failed to create policies: ${createPoliciesError.message}`);
+    if (policiesError) {
+      throw new Error(`Failed to create policies: ${policiesError.message}`);
     }
 
-    console.log("New policies created");
+    console.log("Prototype policies created successfully");
 
     // Fix prototype_shares RLS if needed
     const { error: sharesPoliciesError } = await supabase.rpc('execute_sql', {
       sql_query: `
+        -- Make sure RLS is enabled
         ALTER TABLE IF EXISTS public.prototype_shares ENABLE ROW LEVEL SECURITY;
 
+        -- Drop existing possibly problematic policies
         DROP POLICY IF EXISTS "Users can view their own shares" ON public.prototype_shares;
         DROP POLICY IF EXISTS "Users can create shares" ON public.prototype_shares;
         DROP POLICY IF EXISTS "Users can update their own shares" ON public.prototype_shares;
         DROP POLICY IF EXISTS "Users can delete their own shares" ON public.prototype_shares;
 
-        -- Simpler policies to avoid recursion
+        -- Simpler policies using clerk_id
         CREATE POLICY "Users can view their own shares" 
         ON public.prototype_shares
         FOR SELECT 
         USING (
-          shared_by = nullif(current_setting('request.jwt.claim.sub', true), '')::text
+          shared_by = (SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::text)
           OR is_public = true
         );
 
@@ -172,21 +118,21 @@ serve(async (req) => {
         ON public.prototype_shares
         FOR INSERT
         WITH CHECK (
-          shared_by = nullif(current_setting('request.jwt.claim.sub', true), '')::text
+          shared_by = (SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::text)
         );
 
         CREATE POLICY "Users can update their own shares" 
         ON public.prototype_shares
         FOR UPDATE
         USING (
-          shared_by = nullif(current_setting('request.jwt.claim.sub', true), '')::text
+          shared_by = (SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::text)
         );
 
         CREATE POLICY "Users can delete their own shares" 
         ON public.prototype_shares
         FOR DELETE
         USING (
-          shared_by = nullif(current_setting('request.jwt.claim.sub', true), '')::text
+          shared_by = (SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::text)
         );
       `
     });
@@ -195,7 +141,7 @@ serve(async (req) => {
       throw new Error(`Failed to update share policies: ${sharesPoliciesError.message}`);
     }
 
-    console.log("RLS policies fixed successfully");
+    console.log("Share policies created successfully");
 
     return new Response(
       JSON.stringify({
