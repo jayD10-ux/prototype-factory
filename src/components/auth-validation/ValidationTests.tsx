@@ -153,7 +153,7 @@ export function ValidationTests() {
           name: `Test Prototype ${Date.now()}`,
           url: 'https://example.com',
           clerk_id: clerkId,
-          created_by: clerkId
+          created_by: clerkId  // Make sure to cast if needed
         })
         .select()
         .single();

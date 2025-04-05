@@ -1,6 +1,7 @@
 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { QueryClientProvider, createQueryClient } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { createQueryClient } from "@/lib/query-client";
 import { SupabaseProvider } from "@/lib/supabase-provider";
 import { ClerkAuthProvider } from "@/lib/clerk-provider";
 import { NovuProvider } from "@/components/notification/novu-provider";
