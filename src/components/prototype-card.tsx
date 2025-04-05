@@ -1,3 +1,4 @@
+
 import { format, parseISO } from "date-fns";
 import { MessageSquare, Edit, ArrowUpRight, Check } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -15,9 +16,18 @@ interface PrototypeCardProps {
   onSelect?: (prototype: Prototype) => void;
   isSelected?: boolean;
   collectionId?: string;
+  showCreator?: boolean;
+  disableSelection?: boolean;
 }
 
-export function PrototypeCard({ prototype, onSelect, isSelected, collectionId }: PrototypeCardProps) {
+export function PrototypeCard({ 
+  prototype, 
+  onSelect, 
+  isSelected, 
+  collectionId,
+  showCreator = false,
+  disableSelection = false
+}: PrototypeCardProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   
@@ -41,9 +51,20 @@ export function PrototypeCard({ prototype, onSelect, isSelected, collectionId }:
   const handleSelectClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (onSelect) {
+    if (onSelect && !disableSelection) {
       onSelect(prototype);
     }
+  };
+
+  // Determine which URL to use for the "View" link
+  const getViewUrl = () => {
+    if (prototype.type === 'figma' && prototype.figma_url) {
+      return prototype.figma_url;
+    }
+    if (prototype.type === 'external') {
+      return prototype.url;
+    }
+    return prototype.deployment_url;
   };
 
   return (
@@ -67,7 +88,7 @@ export function PrototypeCard({ prototype, onSelect, isSelected, collectionId }:
           </div>
 
           {/* Selection Check and Edit Button section */}
-          {onSelect && (isHovering || isSelected) && (
+          {onSelect && !disableSelection && (isHovering || isSelected) && (
             <div 
               className={cn(
                 "absolute top-3 right-3 z-20 p-1.5 rounded-full cursor-pointer transition-all duration-200",
@@ -82,7 +103,7 @@ export function PrototypeCard({ prototype, onSelect, isSelected, collectionId }:
           )}
 
           {/* Edit Button - Positioned in top-right when hovering */}
-          {isHovering && (
+          {isHovering && !disableSelection && (
             <div 
               className="absolute top-3 left-3 z-20 transition-opacity duration-200 opacity-100"
               onClick={(e) => {
@@ -128,14 +149,14 @@ export function PrototypeCard({ prototype, onSelect, isSelected, collectionId }:
                 )}
               </div>
               
-              {/* View Link */}
-              {prototype.deployment_url && (
+              {/* View Link - Different behavior based on prototype type */}
+              {getViewUrl() && (
                 <div className="flex-shrink-0">
                   <button
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      window.open(prototype.deployment_url, '_blank', 'noopener,noreferrer');
+                      window.open(getViewUrl(), '_blank', 'noopener,noreferrer');
                     }}
                     className="flex items-center gap-1 text-primary hover:underline transition-colors text-xs"
                   >

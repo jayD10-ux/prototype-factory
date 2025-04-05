@@ -57,7 +57,7 @@ export function AddPrototypeDialog({
         .insert({
           name: figmaName.trim(),
           created_by: user?.id,
-          url: null,
+          url: figmaUrl.trim(), // Store Figma URL as the main URL too
           figma_url: figmaUrl.trim(),
           deployment_status: "completed",
           type: "figma",

@@ -1,264 +1,203 @@
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { UploadCloud, Plus } from 'lucide-react';
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Loader2, Upload } from "lucide-react";
+import { JSZip } from "jszip";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import supabaseAuthWrapper from "@/integrations/supabase/auth-wrapper";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { validatePrototypeZip } from '../utils/zip-utils';
+import { useClerkAuth } from "@/lib/clerk-provider";
 
-export function UploadPrototypeDialog({
-  onUpload
-}: {
+interface UploadPrototypeDialogProps {
   onUpload?: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [figmaUrl, setFigmaUrl] = useState("");
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const {
-    toast
-  } = useToast();
+}
+
+export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [prototypeName, setPrototypeName] = useState("");
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { isAuthenticated, user } = useClerkAuth();
 
-  const onDrop = async (acceptedFiles: File[]) => {
-    try {
-      const file = acceptedFiles[0];
-      if (!file) return;
-      if (!name.trim()) {
-        toast({
-          title: "Error",
-          description: "Please enter a name for the prototype",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const maxFileSize = 1024 * 1024 * 1024; // 1GB in bytes
-      if (file.size > maxFileSize) {
-        toast({
-          title: "Error",
-          description: "File size exceeds the 1GB limit",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (file.name.toLowerCase().endsWith('.zip')) {
-        await validatePrototypeZip(file);
-      } else if (!file.name.toLowerCase().match(/\.(html|htm|jsx|tsx|js|ts)$/)) {
-        toast({
-          title: "Error",
-          description: "Please upload an HTML, React/JS file, or a ZIP archive",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const {
-        data
-      } = await supabaseAuthWrapper.getSession();
-      if (!data.session?.user) {
-        toast({
-          title: "Error",
-          description: "Please sign in to upload prototypes",
-          variant: "destructive"
-        });
-        navigate('/auth');
-        return;
-      }
-
-      const {
-        data: prototype,
-        error: prototypeError
-      } = await supabase.from('prototypes').insert({
-        name: name.trim(),
-        created_by: data.session.user.id,
-        url: null,
-        deployment_status: 'pending',
-        figma_url: figmaUrl.trim() || null
-      }).select().single();
-      if (prototypeError) throw prototypeError;
-
-      const filePath = `${prototype.id}/${file.name}`;
-
-      const fileReader = new FileReader();
-
-      let uploadProgressInterval: number | undefined;
-      fileReader.onload = async () => {
-        const fileData = new Uint8Array(fileReader.result as ArrayBuffer);
-
-        let progress = 0;
-        uploadProgressInterval = window.setInterval(() => {
-          progress += 5;
-          if (progress <= 95) {
-            setUploadProgress(progress);
-          }
-        }, 300) as unknown as number;
-        try {
-          console.log(`Uploading file: ${file.name} (${Math.round(file.size / 1024 / 1024)}MB)`);
-          const {
-            data: uploadData,
-            error: uploadError
-          } = await supabase.storage.from('prototype-uploads').upload(filePath, fileData, {
-            contentType: file.type || 'application/octet-stream'
-          });
-          if (uploadError) throw uploadError;
-
-          setUploadProgress(100);
-
-          const {
-            data: processData,
-            error: processError
-          } = await supabase.functions.invoke('process-prototype', {
-            body: {
-              prototypeId: prototype.id,
-              fileName: file.name
-            }
-          });
-          if (processError) {
-            console.error('Process error details:', processError);
-            throw new Error(processError.message || 'Failed to process prototype');
-          }
-
-          const {
-            error: updateError
-          } = await supabase.from('prototypes').update({
-            file_path: filePath,
-            deployment_status: 'processing'
-          }).eq('id', prototype.id);
-          if (updateError) throw updateError;
-
-          queryClient.invalidateQueries({
-            queryKey: ['prototypes']
-          });
-          toast({
-            title: "Success",
-            description: "Prototype uploaded successfully"
-          });
-          setOpen(false);
-
-          navigate(`/prototype/${prototype.id}`);
-        } catch (error) {
-          throw error;
-        } finally {
-          clearInterval(uploadProgressInterval);
-        }
-      };
-      fileReader.readAsArrayBuffer(file);
-    } catch (error: any) {
-      console.error('Error uploading prototype:', error);
-      const errorMessage = error.message || "Failed to upload prototype";
-      const description = error.response?.text ? await error.response.text() : errorMessage;
+  const { getRootProps, getInputProps, isDragActive, acceptedFiles } = useDropzone({
+    maxFiles: 1,
+    maxSize: 10 * 1024 * 1024, // 10MB max size
+    onDropRejected: (fileRejections) => {
+      const error = fileRejections[0]?.errors[0];
       toast({
-        title: "Error",
-        description: description,
-        variant: "destructive"
+        title: "Upload Error",
+        description: error?.message || "Invalid file",
+        variant: "destructive",
       });
-      setUploadProgress(0);
+    },
+  });
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!isAuthenticated || !user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to upload prototypes",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!prototypeName.trim()) {
+      toast({
+        title: "Name required",
+        description: "Please enter a name for your prototype",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!acceptedFiles.length) {
+      toast({
+        title: "File required",
+        description: "Please upload a HTML/ZIP file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const file = acceptedFiles[0];
+    setIsLoading(true);
+
+    try {
+      // Upload the file to storage
+      const fileName = `${Date.now()}-${file.name}`;
+      const filePath = `${user.id}/${fileName}`;
+      
+      const { error: uploadError } = await supabase
+        .storage
+        .from('prototype-uploads')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Create the prototype record
+      const { data: prototype, error: insertError } = await supabase
+        .from('prototypes')
+        .insert({
+          name: prototypeName.trim(),
+          created_by: user.id,
+          url: null, // Will be set by the processing function
+          file_path: filePath,
+          type: 'upload',
+          deployment_status: 'pending',
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      toast({
+        title: "Success",
+        description: "Prototype uploaded successfully. Processing will begin shortly.",
+      });
+      
+      // Invalidate queries to refresh the prototype list
+      queryClient.invalidateQueries({ queryKey: ['prototypes'] });
+      
+      if (onUpload) {
+        onUpload();
+      }
+
+      // Navigate to the prototype detail page
+      navigate(`/prototype/${prototype.id}`);
+
+    } catch (error: any) {
+      console.error("Error uploading prototype:", error);
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload prototype",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const {
-    getRootProps,
-    getInputProps,
-    isDragActive
-  } = useDropzone({
-    onDrop,
-    maxFiles: 1,
-    accept: {
-      'application/zip': ['.zip'],
-      'text/html': ['.html', '.htm'],
-      'text/jsx': ['.jsx'],
-      'text/typescript': ['.tsx'],
-      'application/javascript': ['.js'],
-      'application/typescript': ['.ts']
-    },
-    maxSize: 1024 * 1024 * 1024 // 1GB size limit
-  });
+  const fileDisplay = acceptedFiles.length > 0 ? (
+    <div className="mt-4 p-2 bg-muted rounded-lg">
+      <p className="text-sm truncate">{acceptedFiles[0].name}</p>
+      <p className="text-xs text-muted-foreground">
+        {(acceptedFiles[0].size / 1024).toFixed(1)} KB
+      </p>
+    </div>
+  ) : null;
 
-  return <>
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add New Prototype</DialogTitle>
-          <DialogDescription>
-            Upload your prototype files (HTML, React components) or a ZIP archive containing your project.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Name
-            </Label>
-            <Input id="name" value={name} onChange={e => setName(e.target.value)} className="col-span-3" placeholder="Enter prototype name" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="figmaUrl" className="text-right">
-              Figma URL
-            </Label>
-            <div className="col-span-3 space-y-1">
-              <Input id="figmaUrl" value={figmaUrl} onChange={e => setFigmaUrl(e.target.value)} className="w-full" placeholder="https://www.figma.com/file/..." />
-              <p className="text-xs text-muted-foreground">
-                Link your Figma design to view it alongside your prototype
-              </p>
-            </div>
-          </div>
+  return (
+    <div className="space-y-4 py-2 pb-4">
+      <div className="space-y-2">
+        <p className="text-sm text-muted-foreground">
+          Upload a HTML file or ZIP archive containing your prototype
+        </p>
+      </div>
+
+      <form onSubmit={handleUpload} className="space-y-4">
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="prototypeName" className="text-right">
+            Name
+          </Label>
+          <Input
+            id="prototypeName"
+            value={prototypeName}
+            onChange={(e) => setPrototypeName(e.target.value)}
+            className="col-span-3"
+            placeholder="Enter prototype name"
+            disabled={isLoading}
+            required
+          />
         </div>
-        
-        <div {...getRootProps()} className="group relative">
-          <div className={`flex h-64 w-full flex-col items-center justify-center rounded-lg border-2 border-dashed 
-            ${isDragActive ? 'border-primary bg-primary/10' : 'border-muted-foreground/50'} 
-            transition-colors hover:border-primary p-6`}>
-            <div className="space-y-4 text-center">
-              <UploadCloud className="mx-auto h-8 w-8 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">
-                  {isDragActive ? 'Drop to upload' : 'Drag files here or click to select'}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Supported formats:
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  <strong>HTML:</strong> .html, .htm
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  <strong>React/JS:</strong> .jsx, .tsx, .js, .ts
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  <strong>Archive:</strong> .zip (max 1GB)
-                </p>
-              </div>
-              {uploadProgress > 0 && <div className="w-full max-w-xs mx-auto">
-                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                    <div className="h-full bg-primary transition-all duration-300" style={{
-                      width: `${uploadProgress}%`
-                    }} />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {uploadProgress === 100 ? 'Processing...' : `Uploading: ${uploadProgress}%`}
-                  </p>
-                </div>}
-            </div>
+
+        <Card className="border-dashed">
+          <div
+            {...getRootProps()}
+            className={`p-10 text-center cursor-pointer hover:bg-muted/50 transition-colors rounded-lg flex flex-col items-center justify-center ${
+              isDragActive ? "bg-muted" : ""
+            }`}
+          >
+            <input {...getInputProps()} accept=".html,.htm,.zip" />
+            <Upload className="h-10 w-10 text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground mb-1">
+              Drag & drop your files here
+            </p>
+            <p className="text-xs text-muted-foreground">
+              or click to select files (HTML or ZIP)
+            </p>
+            {fileDisplay}
           </div>
-          <input {...getInputProps()} />
-        </div>
-        <DialogFooter>
-          <Button type="submit" onClick={() => {
-            const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-            if (input) input.click();
-          }}>
-            Select Files
+        </Card>
+
+        <div className="flex justify-end gap-2 mt-4">
+          <Button variant="outline" type="button" onClick={onUpload} disabled={isLoading}>
+            Cancel
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  </>;
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              "Upload"
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
 }

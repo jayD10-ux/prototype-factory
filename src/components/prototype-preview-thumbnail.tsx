@@ -1,106 +1,127 @@
-import { useState, useEffect } from "react";
-import { Prototype } from "@/types/prototype";
 
-interface PrototypePreviewThumbnailProps {
+import { useEffect, useState } from "react";
+import { Prototype } from "@/types/prototype";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
+
+interface Props {
   prototype: Prototype;
-  className?: string;
 }
 
-export function PrototypePreviewThumbnail({ prototype, className = "" }: PrototypePreviewThumbnailProps) {
+export function PrototypePreviewThumbnail({ prototype }: Props) {
   const [isLoading, setIsLoading] = useState(true);
-  const [previewError, setPreviewError] = useState(false);
-  const [iframeKey, setIframeKey] = useState(0); // Add key to force iframe refresh
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // Try deployment URL first, then preview URL, then sandbox URL if available
-  const getPreviewUrl = () => {
-    if (prototype.deployment_status === 'deployed' && prototype.deployment_url) {
-      return prototype.deployment_url;
-    }
-    if (prototype.preview_url) {
-      return prototype.preview_url;
-    }
-    if (prototype.sandbox_config) {
-      // If we have sandbox config, we could potentially render a sandbox preview
-      return null;
-    }
-    return null;
-  };
-
-  const previewUrl = getPreviewUrl();
-  const hasValidPreview = !!previewUrl;
-
-  // Add debug logging
   useEffect(() => {
-    if (prototype.id) {
-      console.debug(`Prototype ${prototype.id} preview status:`, {
-        deployment_url: prototype.deployment_url,
-        deployment_status: prototype.deployment_status,
-        preview_url: prototype.preview_url,
-        sandbox_config: prototype.sandbox_config,
-        final_url: previewUrl
-      });
-    }
-  }, [prototype, previewUrl]);
+    const loadPreview = async () => {
+      try {
+        // Handle different prototype types
+        if (prototype.type === 'figma' && prototype.figma_url) {
+          setPreviewUrl('/placeholder.svg');
+          setIsLoading(false);
+          return;
+        }
+        
+        if (prototype.type === 'external') {
+          setPreviewUrl('/placeholder.svg');
+          setIsLoading(false);
+          return;
+        }
 
-  const handleLoad = () => {
-    setIsLoading(false);
-    setPreviewError(false);
-  };
+        // If there's a preview_image, use it
+        if (prototype.preview_image) {
+          setPreviewUrl(prototype.preview_image);
+          setIsLoading(false);
+          return;
+        }
 
-  const handleError = () => {
-    setIsLoading(false);
-    setPreviewError(true);
-    console.error(`Preview load error for prototype ${prototype.id}:`, previewUrl);
-    // Attempt to reload once
-    if (iframeKey === 0) {
-      setIframeKey(1);
-    }
-  };
+        // Use preview_url if available
+        if (prototype.preview_url) {
+          setPreviewUrl(prototype.preview_url);
+          setIsLoading(false);
+          return;
+        }
 
-  const renderPreview = () => {
-    if (!hasValidPreview) {
-      return (
-        <div className="flex items-center justify-center h-full bg-muted/50">
-          <p className="text-sm text-muted-foreground">No preview available</p>
-        </div>
-      );
-    }
+        // For uploaded prototypes with deployment_url
+        if (prototype.deployment_url) {
+          setPreviewUrl(prototype.deployment_url);
+          setIsLoading(false);
+          return;
+        }
 
+        // Default placeholder
+        setPreviewUrl('/placeholder.svg');
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error loading preview:", error);
+        setPreviewUrl('/placeholder.svg');
+        setIsLoading(false);
+      }
+    };
+
+    loadPreview();
+  }, [prototype]);
+
+  if (isLoading) {
     return (
-      <>
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
-            <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-foreground"></div>
-          </div>
-        )}
-        <iframe
-          key={iframeKey}
-          src={previewUrl}
-          title={`Preview of ${prototype.name}`}
-          className="w-full h-full border-none"
-          style={{ 
-            opacity: isLoading ? 0 : 1, 
-            transition: "opacity 0.3s ease",
-            pointerEvents: "none" // Prevent interaction with iframe in card view
-          }}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
-          loading="lazy"
-          onLoad={handleLoad}
-          onError={handleError}
-          referrerPolicy="no-referrer"
-        />
-      </>
+      <div className="w-full h-full flex items-center justify-center bg-secondary/20">
+        <Loader2 className="w-6 h-6 animate-spin opacity-70" />
+      </div>
     );
-  };
+  }
+
+  if (prototype.type === 'figma' && prototype.figma_url) {
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+        <img 
+          src="/placeholder.svg" 
+          alt={prototype.name} 
+          className="w-1/2 h-1/2 object-contain opacity-40"
+        />
+        <div className="absolute bottom-3 right-3 bg-white/90 text-xs px-2 py-1 rounded-sm shadow-sm">
+          Figma
+        </div>
+      </div>
+    );
+  }
+
+  if (prototype.type === 'external') {
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+        <img 
+          src="/placeholder.svg" 
+          alt={prototype.name} 
+          className="w-1/2 h-1/2 object-contain opacity-40"
+        />
+        <div className="absolute bottom-3 right-3 bg-white/90 text-xs px-2 py-1 rounded-sm shadow-sm">
+          External
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className={`relative w-full h-full overflow-hidden ${className}`}>
-      {previewError ? (
-        <div className="flex items-center justify-center h-full bg-muted/50">
-          <p className="text-sm text-muted-foreground">Failed to load preview</p>
-        </div>
+    <div className="w-full h-full relative bg-white">
+      {previewUrl ? (
+        <img 
+          src={previewUrl} 
+          alt={prototype.name} 
+          className="w-full h-full object-cover"
+          onError={() => setPreviewUrl('/placeholder.svg')}
+        />
       ) : (
-        renderPreview()
+        <div className="w-full h-full flex items-center justify-center bg-muted">
+          <span className="text-xs text-muted-foreground">No preview</span>
+        </div>
+      )}
+      
+      {prototype.deployment_status === 'pending' && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+          <div className="flex flex-col items-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+            <span className="text-xs text-muted-foreground">Processing...</span>
+          </div>
+        </div>
       )}
     </div>
   );

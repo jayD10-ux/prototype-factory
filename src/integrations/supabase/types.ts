@@ -523,6 +523,7 @@ export type Database = {
           project_id: string | null
           sandbox_config: Json | null
           status: string | null
+          type: string | null
           updated_at: string
           url: string
         }
@@ -547,6 +548,7 @@ export type Database = {
           project_id?: string | null
           sandbox_config?: Json | null
           status?: string | null
+          type?: string | null
           updated_at?: string
           url: string
         }
@@ -571,6 +573,7 @@ export type Database = {
           project_id?: string | null
           sandbox_config?: Json | null
           status?: string | null
+          type?: string | null
           updated_at?: string
           url?: string
         }

@@ -11,7 +11,7 @@ export interface Prototype {
   preview_title: string | null;
   preview_description: string | null;
   preview_image: string | null;
-  deployment_status: 'pending' | 'processing' | 'deployed' | 'failed';
+  deployment_status: 'pending' | 'processing' | 'deployed' | 'completed' | 'failed';
   deployment_url: string | null;
   file_path: string | null;
   processed_at: string | null;
@@ -19,6 +19,7 @@ export interface Prototype {
   status: string | null;
   figma_url: string | null;
   sandbox_config: Record<string, unknown> | null;
+  type: 'upload' | 'figma' | 'external' | null;
 }
 
 export interface Collection {
