@@ -20,10 +20,19 @@ serve(async (req) => {
 
     console.log("Running fix-rls function");
 
-    // Drop existing RLS policies that might be causing issues - using async/await pattern instead of .catch()
+    // First, drop existing policies for prototypes table
     try {
-      await supabase.rpc('execute_sql', {
-        sql_query: `
+      await supabase
+        .from('prototypes')
+        .select('id')
+        .limit(1)
+        .then(() => {
+          console.log("Successfully connected to prototypes table");
+        });
+
+      // Drop existing policies directly with SQL
+      const { error: dropError } = await supabase.rpc('execute_sql_wrapper', {
+        sql_statement: `
           -- Drop existing policies
           DROP POLICY IF EXISTS "Users can view their own prototypes" ON public.prototypes;
           DROP POLICY IF EXISTS "Users can view shared prototypes" ON public.prototypes;
@@ -35,15 +44,61 @@ serve(async (req) => {
           ALTER TABLE public.prototypes ENABLE ROW LEVEL SECURITY;
         `
       });
+
+      if (dropError) {
+        console.log("Warning when dropping policies:", dropError);
+        // Continue even if this fails
+      }
     } catch (dropError) {
-      console.log("Error dropping policies:", dropError);
+      console.log("Error connecting to prototypes or dropping policies:", dropError);
       // Continue execution even if this fails
     }
 
-    // Create new simplified policies directly
+    // Create execute_sql_wrapper function if it doesn't exist
     try {
-      const { error: policiesError } = await supabase.rpc('execute_sql', {
-        sql_query: `
+      const { error: createWrapperError } = await supabase.rpc('execute_sql_wrapper', {
+        sql_statement: `
+          -- Create the wrapper function if it doesn't exist
+          CREATE OR REPLACE FUNCTION public.execute_sql_wrapper(sql_statement text)
+          RETURNS void
+          LANGUAGE plpgsql
+          SECURITY DEFINER
+          AS $$
+          BEGIN
+            EXECUTE sql_statement;
+          END;
+          $$;
+        `
+      });
+
+      if (createWrapperError) {
+        // If the function doesn't exist yet, create it directly
+        const { error: createDirectError } = await supabase.sql(`
+          CREATE OR REPLACE FUNCTION public.execute_sql_wrapper(sql_statement text)
+          RETURNS void
+          LANGUAGE plpgsql
+          SECURITY DEFINER
+          AS $$
+          BEGIN
+            EXECUTE sql_statement;
+          END;
+          $$;
+        `);
+        
+        if (createDirectError) {
+          throw new Error(`Failed to create wrapper function: ${createDirectError.message}`);
+        }
+      }
+    } catch (error) {
+      console.log("Error creating wrapper function:", error);
+      // We need to handle this failure as it's critical
+      throw new Error(`Failed to create wrapper function: ${error.message}`);
+    }
+
+    // Create new simplified policies
+    try {
+      const { error: policiesError } = await supabase.rpc('execute_sql_wrapper', {
+        sql_statement: `
           -- Simple policy for viewing own prototypes based on clerk_id
           CREATE POLICY "Users can view their own prototypes" 
           ON public.prototypes
@@ -91,7 +146,7 @@ serve(async (req) => {
       });
 
       if (policiesError) {
-        throw new Error(`Failed to create policies: ${policiesError.message}`);
+        throw new Error(`Failed to create prototype policies: ${policiesError.message}`);
       }
     } catch (createError) {
       console.error("Error creating prototype policies:", createError);
@@ -100,10 +155,10 @@ serve(async (req) => {
 
     console.log("Prototype policies created successfully");
 
-    // Fix prototype_shares RLS if needed
+    // Fix prototype_shares RLS
     try {
-      const { error: sharesPoliciesError } = await supabase.rpc('execute_sql', {
-        sql_query: `
+      const { error: sharesPoliciesError } = await supabase.rpc('execute_sql_wrapper', {
+        sql_statement: `
           -- Make sure RLS is enabled
           ALTER TABLE IF EXISTS public.prototype_shares ENABLE ROW LEVEL SECURITY;
 
@@ -155,6 +210,7 @@ serve(async (req) => {
 
     console.log("Share policies created successfully");
 
+    // Return success response
     return new Response(
       JSON.stringify({
         success: true,
@@ -175,6 +231,7 @@ serve(async (req) => {
       JSON.stringify({
         success: false,
         error: error.message,
+        stack: error.stack,
       }),
       {
         headers: {

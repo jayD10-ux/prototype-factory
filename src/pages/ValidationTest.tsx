@@ -22,11 +22,20 @@ export default function ValidationTestPage() {
       
       if (error) {
         setErrorMessage(`Error: ${error.message}`);
-        setErrorDetails(JSON.stringify(error, null, 2));
+        setErrorDetails(error.stack || JSON.stringify(error, null, 2));
         toast({
           variant: "destructive",
           title: "Error fixing RLS policies",
           description: error.message
+        });
+      } else if (data && !data.success) {
+        // Handle case where function returns 200 but with an error in data
+        setErrorMessage(`Error: ${data.error || 'Unknown error'}`);
+        setErrorDetails(data.stack || JSON.stringify(data, null, 2));
+        toast({
+          variant: "destructive",
+          title: "Error fixing RLS policies",
+          description: data.error || 'Unknown error'
         });
       } else {
         toast({
@@ -35,12 +44,13 @@ export default function ValidationTestPage() {
         });
       }
     } catch (err: any) {
-      setErrorMessage(`Error: ${err.message}`);
+      console.error("Error fixing RLS policies:", err);
+      setErrorMessage(`Error: ${err.message || 'Unknown error'}`);
       setErrorDetails(err.stack || JSON.stringify(err, null, 2));
       toast({
         variant: "destructive",
         title: "Error fixing RLS policies",
-        description: err.message
+        description: err.message || 'Unknown error'
       });
     } finally {
       setIsFixing(false);
