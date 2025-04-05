@@ -1,6 +1,6 @@
 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, createQueryClient } from "@tanstack/react-query";
 import { SupabaseProvider } from "@/lib/supabase-provider";
 import { ClerkAuthProvider } from "@/lib/clerk-provider";
 import { NovuProvider } from "@/components/notification/novu-provider";
@@ -13,7 +13,7 @@ import Onboarding from "./pages/Onboarding";
 import ValidationTest from "./pages/ValidationTest";
 
 // Create a client for React Query
-const queryClient = new QueryClient();
+const queryClient = createQueryClient();
 
 function App() {
   return (

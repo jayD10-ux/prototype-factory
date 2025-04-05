@@ -2,11 +2,7 @@
 // Type definitions for Trusted Types Web API
 // https://w3c.github.io/webappsec-trusted-types/dist/spec/
 
-// Triple-slash directive to indicate this is a lib file
-/// <reference lib="dom" />
-
-// Global declarations for the Trusted Types API
-declare namespace TrustedTypes {
+declare global {
   interface TrustedHTML {}
   interface TrustedScript {}
   interface TrustedScriptURL {}
@@ -30,19 +26,21 @@ declare namespace TrustedTypes {
       }
     ): TrustedTypePolicy;
   }
-}
-
-// Extend Window interface
-interface Window {
-  trustedTypes?: TrustedTypes.TrustedTypePolicyFactory;
+  
+  interface Window {
+    trustedTypes?: TrustedTypePolicyFactory;
+  }
 }
 
 // Ambient module declaration
 declare module 'trusted-types' {
-  export const TrustedHTML: TrustedTypes.TrustedHTML;
-  export const TrustedScript: TrustedTypes.TrustedScript;
-  export const TrustedScriptURL: TrustedTypes.TrustedScriptURL;
-  export const TrustedURL: TrustedTypes.TrustedURL;
-  export const TrustedTypePolicy: TrustedTypes.TrustedTypePolicy;
-  export const TrustedTypePolicyFactory: TrustedTypes.TrustedTypePolicyFactory;
+  export type TrustedHTML = TrustedHTML;
+  export type TrustedScript = TrustedScript;
+  export type TrustedScriptURL = TrustedScriptURL;
+  export type TrustedURL = TrustedURL;
+  export type TrustedTypePolicy = TrustedTypePolicy;
+  export type TrustedTypePolicyFactory = TrustedTypePolicyFactory;
 }
+
+// This export ensures this is treated as a module
+export {};
