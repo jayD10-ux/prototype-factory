@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { Novu } from "@novu/node";
+import { Novu } from "https://esm.sh/@novu/node@0.19.0";
 
 interface NovuError {
   message?: string;

@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { Novu } from "npm:@novu/node";
+import { Novu } from "https://esm.sh/@novu/node";
 
 // Set up CORS headers for the API
 const corsHeaders = {
