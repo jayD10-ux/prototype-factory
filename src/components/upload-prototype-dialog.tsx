@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "./ui/button";
@@ -11,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useClerkAuth } from "@/lib/clerk-provider";
+import { validatePrototypeZip } from "@/utils/zip-utils";
 
 interface UploadPrototypeDialogProps {
   onUpload?: () => void;
@@ -26,7 +28,11 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
 
   const { getRootProps, getInputProps, isDragActive, acceptedFiles } = useDropzone({
     maxFiles: 1,
-    maxSize: 10 * 1024 * 1024,
+    maxSize: 10 * 1024 * 1024, // 10MB
+    accept: {
+      'text/html': ['.html', '.htm'],
+      'application/zip': ['.zip']
+    },
     onDropRejected: (fileRejections) => {
       const error = fileRejections[0]?.errors[0];
       toast({
@@ -71,24 +77,48 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
     setIsLoading(true);
 
     try {
+      // If ZIP file, validate it first
+      if (file.type === 'application/zip') {
+        try {
+          await validatePrototypeZip(file);
+        } catch (error: any) {
+          toast({
+            title: "Invalid ZIP file",
+            description: error.message || "The ZIP file doesn't contain valid web content",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const fileName = `${Date.now()}-${file.name}`;
       const filePath = `${user.id}/${fileName}`;
       
+      console.log("Uploading file to path:", filePath);
+      
+      // Upload file to storage
       const { error: uploadError } = await supabase
         .storage
         .from('prototype-uploads')
         .upload(filePath, file);
 
       if (uploadError) {
+        console.error("Storage upload error:", uploadError);
         throw uploadError;
       }
 
+      console.log("File uploaded successfully, now inserting prototype record");
+      console.log("Current user:", user);
+      console.log("User ID being used:", user.id);
+      
+      // Insert prototype record with explicit clerk_id
       const { data: prototype, error: insertError } = await supabase
         .from('prototypes')
         .insert({
           name: prototypeName.trim(),
           created_by: user.id,
-          clerk_id: user.id,
+          clerk_id: user.id, // Explicitly set clerk_id
           url: null,
           file_path: filePath,
           type: 'upload',
@@ -98,6 +128,7 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
         .single();
 
       if (insertError) {
+        console.error("Database insert error:", insertError);
         throw insertError;
       }
 
