@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "./ui/button";
@@ -6,7 +5,7 @@ import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Loader2, Upload } from "lucide-react";
-import JSZip from "jszip"; // Changed from { JSZip } to JSZip
+import JSZip from "jszip";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -27,7 +26,7 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
 
   const { getRootProps, getInputProps, isDragActive, acceptedFiles } = useDropzone({
     maxFiles: 1,
-    maxSize: 10 * 1024 * 1024, // 10MB max size
+    maxSize: 10 * 1024 * 1024,
     onDropRejected: (fileRejections) => {
       const error = fileRejections[0]?.errors[0];
       toast({
@@ -72,7 +71,6 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
     setIsLoading(true);
 
     try {
-      // Upload the file to storage
       const fileName = `${Date.now()}-${file.name}`;
       const filePath = `${user.id}/${fileName}`;
       
@@ -85,13 +83,13 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
         throw uploadError;
       }
 
-      // Create the prototype record
       const { data: prototype, error: insertError } = await supabase
         .from('prototypes')
         .insert({
           name: prototypeName.trim(),
           created_by: user.id,
-          url: null, // Will be set by the processing function
+          clerk_id: user.id,
+          url: null,
           file_path: filePath,
           type: 'upload',
           deployment_status: 'pending',
@@ -108,14 +106,12 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
         description: "Prototype uploaded successfully. Processing will begin shortly.",
       });
       
-      // Invalidate queries to refresh the prototype list
       queryClient.invalidateQueries({ queryKey: ['prototypes'] });
       
       if (onUpload) {
         onUpload();
       }
 
-      // Navigate to the prototype detail page
       navigate(`/prototype/${prototype.id}`);
 
     } catch (error: any) {

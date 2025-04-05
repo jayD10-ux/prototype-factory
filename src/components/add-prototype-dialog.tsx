@@ -1,4 +1,3 @@
-
 // Update the component to use isLoaded from the ClerkAuth context
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
@@ -57,7 +56,8 @@ export function AddPrototypeDialog({
         .insert({
           name: figmaName.trim(),
           created_by: user?.id,
-          url: figmaUrl.trim(), // Store Figma URL as the main URL too
+          clerk_id: user?.id,
+          url: figmaUrl.trim(),
           figma_url: figmaUrl.trim(),
           deployment_status: "completed",
           type: "figma",
@@ -105,6 +105,7 @@ export function AddPrototypeDialog({
         .insert({
           name: externalName.trim(),
           created_by: user?.id,
+          clerk_id: user?.id,
           url: externalUrl.trim(),
           deployment_status: "completed",
           type: "external",
