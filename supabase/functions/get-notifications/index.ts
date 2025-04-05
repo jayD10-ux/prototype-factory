@@ -28,64 +28,21 @@ serve(async (req) => {
   }
 
   try {
-    const novuApiKey = Deno.env.get("NOVU_API_KEY");
-    if (!novuApiKey) {
-      throw new Error("NOVU_API_KEY environment variable is not set");
-    }
-
-    // Initialize Novu with the API key
-    const novu = new Novu(novuApiKey);
-
-    // Parse request body
-    const { userId } = await req.json();
-    if (!userId) {
-      throw new Error("User ID is required");
-    }
-
-    console.log("Fetching notifications for user:", userId);
-    
-    try {
-      // Get subscriber's notifications from Novu
-      const result = await novu.subscribers.getNotificationsFeed(userId, {
-        page: 0,
-        limit: 10,
-      });
-
-      if (!result?.data) {
-        throw new Error("Failed to fetch notifications from Novu");
-      }
-
-      return new Response(JSON.stringify({ 
-        notifications: result.data.data || [],
-        totalCount: result.data.totalCount || 0,
-        pageSize: result.data.pageSize || 10,
-        page: result.data.page || 0,
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    } catch (err) {
-      const novuError = err as NovuError;
-      console.error("Novu API Error:", novuError);
-      
-      // Return a structured error response with status code
-      return new Response(JSON.stringify({ 
-        error: "Failed to fetch notifications from Novu",
-        details: {
-          message: novuError.message || "Unknown error",
-          status: novuError.status || 500
-        }
-      }), {
-        status: novuError.status || 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // Since we're disabling notifications, just return an empty array
+    return new Response(JSON.stringify({ 
+      notifications: [],
+      totalCount: 0,
+      pageSize: 10,
+      page: 0,
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
     const error = err as Error;
     const errorDetails = {
       message: error.message,
       stack: error.stack,
       name: error.name,
-      novuKeyExists: !!Deno.env.get("NOVU_API_KEY"),
     };
     
     console.error("Error in get-notifications function:", errorDetails);
