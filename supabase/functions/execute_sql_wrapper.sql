@@ -9,3 +9,12 @@ BEGIN
   EXECUTE sql_statement;
 END;
 $$;
+
+-- Create or replace the get_clerk_user_id function
+CREATE OR REPLACE FUNCTION public.get_clerk_user_id()
+RETURNS text
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::text;
+$$;

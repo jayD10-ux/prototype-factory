@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useClerkAuth } from "@/lib/clerk-provider";
+import { useSupabase } from "@/lib/supabase-provider";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +36,7 @@ export function EditPrototypeDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useClerkAuth();
+  const { supabase } = useSupabase();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -8,11 +8,11 @@ import { Label } from "./ui/label";
 import { Loader2, Upload } from "lucide-react";
 import JSZip from "jszip";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useClerkAuth } from "@/lib/clerk-provider";
 import { validatePrototypeZip } from "@/utils/zip-utils";
+import { useSupabase } from "@/lib/supabase-provider";
 
 interface UploadPrototypeDialogProps {
   onUpload?: () => void;
@@ -25,6 +25,8 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useClerkAuth();
+  // Use the authenticated Supabase client from the provider
+  const { supabase } = useSupabase();
 
   const { getRootProps, getInputProps, isDragActive, acceptedFiles } = useDropzone({
     maxFiles: 1,

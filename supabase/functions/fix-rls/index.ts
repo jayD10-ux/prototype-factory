@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -99,6 +98,16 @@ serve(async (req) => {
     try {
       const { error: policiesError } = await supabase.rpc('execute_sql_wrapper', {
         sql_statement: `
+          -- Drop existing policies
+          DROP POLICY IF EXISTS "Users can view their own prototypes" ON public.prototypes;
+          DROP POLICY IF EXISTS "Users can view shared prototypes" ON public.prototypes;
+          DROP POLICY IF EXISTS "Users can update their own prototypes" ON public.prototypes;
+          DROP POLICY IF EXISTS "Users can insert prototypes" ON public.prototypes;
+          DROP POLICY IF EXISTS "Users can delete their own prototypes" ON public.prototypes;
+          
+          -- Make sure RLS is enabled
+          ALTER TABLE public.prototypes ENABLE ROW LEVEL SECURITY;
+
           -- Simple policy for viewing own prototypes based on clerk_id
           CREATE POLICY "Users can view their own prototypes" 
           ON public.prototypes

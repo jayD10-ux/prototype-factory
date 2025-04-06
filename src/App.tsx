@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createQueryClient } from "@/lib/query-client";
@@ -12,11 +11,32 @@ import SharedPrototype from "./pages/SharedPrototype";
 import { PrototypeDetail } from "./components/PrototypeDetail";
 import Onboarding from "./pages/Onboarding";
 import ValidationTest from "./pages/ValidationTest";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 // Create a client for React Query
 const queryClient = createQueryClient();
 
 function App() {
+  useEffect(() => {
+    const fixRLS = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('fix-rls', {
+          method: 'POST',
+        });
+        if (error) {
+          console.error("Error fixing RLS:", error);
+        } else {
+          console.log("RLS fixed successfully:", data);
+        }
+      } catch (err) {
+        console.error("Error calling fix-rls function:", err);
+      }
+    };
+
+    fixRLS();
+  }, []);
+
   return (
     <ThemeProvider defaultTheme="light" storageKey="ui-theme">
       <QueryClientProvider client={queryClient}>
