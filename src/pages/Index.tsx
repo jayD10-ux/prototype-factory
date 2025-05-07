@@ -1,10 +1,10 @@
 
 import { PrototypeGrid } from "@/components/prototype-grid";
-import { useClerkAuth } from "@/lib/clerk-provider";
+import { useSupabase } from "@/lib/supabase-provider";
 import Dashboard from "@/components/dashboard";
 
 const Index = () => {
-  const { isLoading } = useClerkAuth();
+  const { user, isLoading } = useSupabase();
 
   if (isLoading) {
     return (

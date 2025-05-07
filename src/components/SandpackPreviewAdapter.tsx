@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useUser } from "@clerk/clerk-react";
+import { useSupabase } from "@/lib/supabase-provider";
 import { FeedbackUser } from "@/types/feedback";
 import { SandpackPreview } from "./SandpackPreview";
 
@@ -27,22 +27,22 @@ export const SandpackPreviewAdapter = ({
   iframeSrc,
   autorun = true,
 }: SandpackPreviewAdapterProps) => {
-  const { user, isSignedIn } = useUser();
+  const { user, isAuthenticated } = useSupabase();
   const [feedbackUser, setFeedbackUser] = useState<FeedbackUser | null>(null);
 
   useEffect(() => {
-    if (user && isSignedIn) {
-      // Convert Clerk user to FeedbackUser type
+    if (user && isAuthenticated) {
+      // Convert Supabase user to FeedbackUser type
       const feedbackUserData: FeedbackUser = {
         id: user.id,
-        name: user.fullName || "Anonymous",
-        avatar_url: user.imageUrl || "",
+        name: user.user_metadata?.name || user.email?.split('@')[0] || "Anonymous",
+        avatar_url: user.user_metadata?.avatar_url || "",
       };
       setFeedbackUser(feedbackUserData);
     } else {
       setFeedbackUser(null);
     }
-  }, [user, isSignedIn]);
+  }, [user, isAuthenticated]);
 
   return (
     <SandpackPreview />

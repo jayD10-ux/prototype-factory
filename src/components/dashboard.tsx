@@ -5,10 +5,10 @@ import { ProfileDropdown } from "./profile/profile-dropdown";
 import { NotificationBell } from "./notification/notification-bell";
 import { Link } from "react-router-dom";
 import { Button } from "./ui/button";
-import { useClerkAuth } from "@/lib/clerk-provider";
+import { useSupabase } from "@/lib/supabase-provider";
 
 export default function Dashboard() {
-  const { isAuthenticated, isLoaded } = useClerkAuth();
+  const { isAuthenticated, session } = useSupabase();
 
   return (
     <>
@@ -26,7 +26,11 @@ export default function Dashboard() {
                 Validation Tests
               </Button>
             </Link>
-            {isLoaded && isAuthenticated && (
+            {!isAuthenticated ? (
+              <Link to="/auth">
+                <Button size="sm">Sign In</Button>
+              </Link>
+            ) : (
               <>
                 <NotificationBell />
                 <ProfileDropdown />
