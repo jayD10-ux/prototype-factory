@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { RefreshCw, AlertTriangle, User } from "lucide-react";
 import { Button } from "./ui/button";
 import { useSupabase } from "@/lib/supabase-provider";
-import { useClerkAuth } from "@/lib/clerk-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { PrototypeShare } from "@/types/prototype-sharing";
 
@@ -18,8 +17,7 @@ export const PrototypeDetail = () => {
   const navigate = useNavigate();
   const [processingTimeout, setProcessingTimeout] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
-  const { supabase, clerkId } = useSupabase();
-  const { user } = useClerkAuth();
+  const { supabase, user } = useSupabase();
   
   const currentUserId = user?.id;
 
@@ -48,7 +46,7 @@ export const PrototypeDetail = () => {
       }
 
       // Check if prototype is shared with the current user
-      if (data && currentUserId && data.clerk_id !== currentUserId) {
+      if (data && currentUserId && data.created_by !== currentUserId) {
         // Check if user has access via share
         const { data: shareData, error: shareError } = await supabase
           .from('prototype_shares' as any)
@@ -133,7 +131,7 @@ export const PrototypeDetail = () => {
   }
 
   // Check if current user is the creator of the prototype
-  const isCreator = currentUserId === prototype.clerk_id;
+  const isCreator = currentUserId === prototype.created_by;
   const creatorName = prototype.profiles?.name || 'Anonymous';
   const creatorAvatar = prototype.profiles?.avatar_url;
 

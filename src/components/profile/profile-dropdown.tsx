@@ -12,19 +12,18 @@ import { useNavigate } from "react-router-dom"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { LogOut } from "lucide-react"
-import { useUser, useClerk } from "@clerk/clerk-react"
+import { useSupabase } from "@/lib/supabase-provider"
 
 export function ProfileDropdown() {
-  const { user } = useUser()
-  const { signOut } = useClerk()
-  const navigate = useNavigate()
-  const [isLoading, setIsLoading] = useState(false)
+  const { user, supabase } = useSupabase();
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSignOut = async () => {
     try {
       setIsLoading(true);
-      await signOut();
-      navigate("/sign-in");
+      await supabase.auth.signOut();
+      navigate("/");
     } catch (error) {
       console.error("Error signing out:", error);
     } finally {
@@ -32,8 +31,8 @@ export function ProfileDropdown() {
     }
   };
 
-  const profileName = user?.fullName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'Guest';
-  const profileAvatar = user?.imageUrl;
+  const profileName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Guest';
+  const profileAvatar = user?.user_metadata?.avatar_url;
 
   return (
     <DropdownMenu>
@@ -53,7 +52,7 @@ export function ProfileDropdown() {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{profileName}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {user?.primaryEmailAddress?.emailAddress}
+              {user?.email}
             </p>
           </div>
         </DropdownMenuLabel>

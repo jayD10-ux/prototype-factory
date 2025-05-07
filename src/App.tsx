@@ -1,8 +1,8 @@
+
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createQueryClient } from "@/lib/query-client";
 import { SupabaseProvider } from "@/lib/supabase-provider";
-import { ClerkAuthProvider } from "@/lib/clerk-provider";
 import { NovuProvider } from "@/components/notification/novu-provider";
 import { Toaster } from "./components/ui/toaster";
 import { ThemeProvider } from "./components/ui/theme-provider";
@@ -11,6 +11,7 @@ import SharedPrototype from "./pages/SharedPrototype";
 import { PrototypeDetail } from "./components/PrototypeDetail";
 import Onboarding from "./pages/Onboarding";
 import ValidationTest from "./pages/ValidationTest";
+import Auth from "./pages/Auth";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -40,23 +41,22 @@ function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="ui-theme">
       <QueryClientProvider client={queryClient}>
-        <ClerkAuthProvider>
-          <SupabaseProvider>
-            <NovuProvider>
-              <Router>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/dashboard" element={<Index />} />
-                  <Route path="/prototype/:id" element={<PrototypeDetail />} />
-                  <Route path="/p/:id" element={<SharedPrototype />} />
-                  <Route path="/onboarding" element={<Onboarding />} />
-                  <Route path="/validation" element={<ValidationTest />} />
-                </Routes>
-              </Router>
-              <Toaster />
-            </NovuProvider>
-          </SupabaseProvider>
-        </ClerkAuthProvider>
+        <SupabaseProvider>
+          <NovuProvider>
+            <Router>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/dashboard" element={<Index />} />
+                <Route path="/prototype/:id" element={<PrototypeDetail />} />
+                <Route path="/p/:id" element={<SharedPrototype />} />
+                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/validation" element={<ValidationTest />} />
+                <Route path="/auth" element={<Auth />} />
+              </Routes>
+            </Router>
+            <Toaster />
+          </NovuProvider>
+        </SupabaseProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

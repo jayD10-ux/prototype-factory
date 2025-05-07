@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useClerkAuth } from "@/lib/clerk-provider";
+import { useSupabase } from "@/lib/supabase-provider";
 import {
   Form,
   FormControl,
@@ -33,7 +32,7 @@ interface ProfileUpdateFormProps {
 }
 
 export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
-  const { user: clerkUser } = useClerkAuth();
+  const { user, supabase } = useSupabase();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -48,20 +47,20 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
     },
   });
 
-  // Get Clerk user ID
-  const clerkUserId = clerkUser?.id;
+  // Get user ID
+  const userId = user?.id;
 
   useEffect(() => {
     const loadProfile = async () => {
-      if (!clerkUserId) return;
+      if (!userId) return;
       
       try {
-        console.log("Loading profile for Clerk ID:", clerkUserId);
+        console.log("Loading profile for user ID:", userId);
         
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('clerk_id', clerkUserId)
+          .eq('id', userId)
           .maybeSingle();
             
         if (error) {
@@ -93,10 +92,10 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
     };
     
     loadProfile();
-  }, [clerkUserId, form, toast]);
+  }, [userId, form, toast, supabase]);
 
   const onSubmit = async (values: ProfileFormValues) => {
-    if (!clerkUserId) {
+    if (!userId) {
       toast({
         title: "Error",
         description: "You must be logged in to update your profile",
@@ -108,7 +107,7 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
     setIsLoading(true);
 
     try {
-      console.log("Submitting profile for Clerk ID:", clerkUserId);
+      console.log("Submitting profile for user ID:", userId);
       
       let avatarPath = null;
 
@@ -116,7 +115,7 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
       if (avatarFile) {
         // Generate unique file path
         const fileExt = avatarFile.name.split('.').pop();
-        const filePath = `${clerkUserId}/${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `${userId}/${Math.random().toString(36).substring(2)}.${fileExt}`;
 
         // Create storage bucket if it doesn't exist
         const { data: bucketList } = await supabase.storage.listBuckets();
@@ -142,7 +141,7 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('id')
-        .eq('clerk_id', clerkUserId)
+        .eq('id', userId)
         .maybeSingle();
 
       // If profile already exists, update it
@@ -163,15 +162,11 @@ export function ProfileUpdateForm({ onComplete }: ProfileUpdateFormProps) {
           throw error;
         }
       } else {
-        // If profile doesn't exist, insert a new one with a generated UUID
-        // Generate a UUID for the profile (similar to what Supabase would do)
-        const profileId = crypto.randomUUID();
-
+        // If profile doesn't exist, insert a new one
         const { error } = await supabase
           .from('profiles')
           .insert({
-            id: profileId, // Explicitly provide an ID
-            clerk_id: clerkUserId,
+            id: userId,
             name: values.name,
             role: values.role,
             bio: values.bio,

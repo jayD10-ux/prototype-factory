@@ -1,22 +1,16 @@
 
 'use client';
 
-import { createContext, useContext } from 'react';
-import { useSupabaseWithClerk } from '@/hooks/use-supabase-with-clerk';
-import { useUser } from '@clerk/clerk-react';
-import { SupabaseClient } from '@supabase/supabase-js';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { SupabaseClient, Session, User } from '@supabase/supabase-js';
 import type { Database } from '@/integrations/supabase/types';
 
 interface SupabaseContextType {
   supabase: SupabaseClient<Database>;
   isAuthenticated: boolean;
-  session: {
-    user: {
-      id: string; // This will now be the Clerk ID
-      email?: string;
-    };
-  } | null;
-  clerkId: string | null | undefined; // New field to explicitly expose Clerk ID
+  session: Session | null;
+  user: User | null;
 }
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
@@ -26,25 +20,41 @@ export interface SupabaseProviderProps {
 }
 
 export function SupabaseProvider({ children }: SupabaseProviderProps) {
-  const { supabase, isAuthenticated, clerkId } = useSupabaseWithClerk();
-  const { user, isLoaded } = useUser();
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Create a session-like object from Clerk user data
-  // This maintains compatibility with code that expects supabase.auth.session
-  const session = isLoaded && user ? {
-    user: {
-      id: user.id, // Clerk ID
-      email: user.primaryEmailAddress?.emailAddress
-    }
-  } : null;
+  useEffect(() => {
+    // Set up the auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, newSession) => {
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        setIsLoading(false);
+      }
+    );
+
+    // Then check for an existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      setIsLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const value = {
+    supabase,
+    isAuthenticated: !!user,
+    session,
+    user
+  };
 
   return (
-    <SupabaseContext.Provider value={{ 
-      supabase,
-      isAuthenticated,
-      session,
-      clerkId
-    }}>
+    <SupabaseContext.Provider value={value}>
       {children}
     </SupabaseContext.Provider>
   );

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useClerkAuth } from "@/lib/clerk-provider";
 import { useSupabase } from "@/lib/supabase-provider";
 import {
   Dialog,
@@ -35,8 +34,7 @@ export function EditPrototypeDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useClerkAuth();
-  const { supabase } = useSupabase();
+  const { user, supabase } = useSupabase();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +46,6 @@ export function EditPrototypeDialog({
         .update({
           name: name.trim(),
           figma_url: figmaUrl.trim() || null,
-          clerk_id: user?.id, // Add clerk_id to ensure it's set
         })
         .eq('id', prototype.id);
 

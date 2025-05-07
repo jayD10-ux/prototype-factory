@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -108,12 +109,12 @@ serve(async (req) => {
           -- Make sure RLS is enabled
           ALTER TABLE public.prototypes ENABLE ROW LEVEL SECURITY;
 
-          -- Simple policy for viewing own prototypes based on clerk_id
+          -- Simple policy for viewing own prototypes
           CREATE POLICY "Users can view their own prototypes" 
           ON public.prototypes
           FOR SELECT 
           USING (
-            clerk_id = get_clerk_user_id()
+            created_by = auth.uid()
           );
 
           -- Simple policy for viewing shared prototypes (public ones)
@@ -133,7 +134,7 @@ serve(async (req) => {
           ON public.prototypes
           FOR UPDATE
           USING (
-            clerk_id = get_clerk_user_id()
+            created_by = auth.uid()
           );
 
           -- Simple policy for inserting own prototypes
@@ -141,7 +142,7 @@ serve(async (req) => {
           ON public.prototypes
           FOR INSERT
           WITH CHECK (
-            clerk_id = get_clerk_user_id()
+            created_by = auth.uid()
           );
 
           -- Simple policy for deleting own prototypes
@@ -149,7 +150,7 @@ serve(async (req) => {
           ON public.prototypes
           FOR DELETE
           USING (
-            clerk_id = get_clerk_user_id()
+            created_by = auth.uid()
           );
         `
       });
@@ -177,12 +178,12 @@ serve(async (req) => {
           DROP POLICY IF EXISTS "Users can update their own shares" ON public.prototype_shares;
           DROP POLICY IF EXISTS "Users can delete their own shares" ON public.prototype_shares;
 
-          -- Simpler policies using clerk_id
+          -- Simpler policies using auth.uid()
           CREATE POLICY "Users can view their own shares" 
           ON public.prototype_shares
           FOR SELECT 
           USING (
-            shared_by = get_clerk_user_id()
+            shared_by = auth.uid()
             OR is_public = true
           );
 
@@ -190,21 +191,21 @@ serve(async (req) => {
           ON public.prototype_shares
           FOR INSERT
           WITH CHECK (
-            shared_by = get_clerk_user_id()
+            shared_by = auth.uid()
           );
 
           CREATE POLICY "Users can update their own shares" 
           ON public.prototype_shares
           FOR UPDATE
           USING (
-            shared_by = get_clerk_user_id()
+            shared_by = auth.uid()
           );
 
           CREATE POLICY "Users can delete their own shares" 
           ON public.prototype_shares
           FOR DELETE
           USING (
-            shared_by = get_clerk_user_id()
+            shared_by = auth.uid()
           );
         `
       });

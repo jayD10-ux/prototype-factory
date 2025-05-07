@@ -10,7 +10,6 @@ import JSZip from "jszip";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { useClerkAuth } from "@/lib/clerk-provider";
 import { validatePrototypeZip } from "@/utils/zip-utils";
 import { useSupabase } from "@/lib/supabase-provider";
 
@@ -24,9 +23,7 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useClerkAuth();
-  // Use the authenticated Supabase client from the provider
-  const { supabase } = useSupabase();
+  const { isAuthenticated, user, supabase } = useSupabase();
 
   const { getRootProps, getInputProps, isDragActive, acceptedFiles } = useDropzone({
     maxFiles: 1,
@@ -112,15 +109,13 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
 
       console.log("File uploaded successfully, now inserting prototype record");
       console.log("Current user:", user);
-      console.log("User ID being used:", user.id);
       
-      // Insert prototype record with explicit clerk_id
+      // Insert prototype record with Supabase user ID
       const { data: prototype, error: insertError } = await supabase
         .from('prototypes')
         .insert({
           name: prototypeName.trim(),
           created_by: user.id,
-          clerk_id: user.id, // Explicitly set clerk_id
           url: null,
           file_path: filePath,
           type: 'upload',

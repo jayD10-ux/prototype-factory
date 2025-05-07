@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Prototype } from "@/types/prototype";
 import { useSupabase } from "@/lib/supabase-provider";
-import { useClerkAuth } from "@/lib/clerk-provider";
 import { PrototypeShare } from "@/types/prototype-sharing";
 
 export function usePrototypeData(
@@ -13,10 +12,9 @@ export function usePrototypeData(
   collectionId: string | null,
   sharedWithMe: boolean = false
 ) {
-  const { supabase, clerkId } = useSupabase();
-  const { user } = useClerkAuth();
+  const { supabase, user } = useSupabase();
   const { toast } = useToast();
-  const userId = user?.id; // This is the Clerk ID
+  const userId = user?.id;
 
   // Query for prototype data
   const {
@@ -34,7 +32,7 @@ export function usePrototypeData(
           const { data: sharedPrototypeIds, error: sharedError } = await supabase
             .from('prototype_shares' as any)
             .select("prototype_id")
-            .eq("email", user?.email) // Use email for now since we're transitioning
+            .eq("email", user?.email) // Use email to find shares
             .eq("is_link_share", false);
             
           if (sharedError) throw sharedError;
@@ -79,7 +77,7 @@ export function usePrototypeData(
               *,
               profiles:created_by(name, avatar_url)
             `)
-            .eq('clerk_id', userId); // Use clerk_id instead of created_by
+            .eq('created_by', userId); // Use created_by field
 
           // Apply collection filter if a collection is selected
           if (collectionId) {

@@ -3,7 +3,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useClerkAuth } from "@/lib/clerk-provider";
+import { useSupabase } from "@/lib/supabase-provider";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -13,7 +13,7 @@ interface AuthModalProps {
 
 export function AuthModal({ isOpen, onClose, redirectPath }: AuthModalProps) {
   const navigate = useNavigate();
-  const { isAuthenticated } = useClerkAuth();
+  const { isAuthenticated } = useSupabase();
 
   // If user is already authenticated, just close the modal
   React.useEffect(() => {
@@ -26,7 +26,7 @@ export function AuthModal({ isOpen, onClose, redirectPath }: AuthModalProps) {
     // Store the current URL or custom path to redirect back after login
     const redirectTo = redirectPath || window.location.pathname;
     localStorage.setItem('redirectAfterLogin', redirectTo);
-    navigate('/sign-in');
+    navigate('/auth');
     onClose();
   };
 
