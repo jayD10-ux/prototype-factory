@@ -58,4 +58,15 @@ declare module 'date-fns' {
       firstWeekContainsDate?: 1 | 2 | 3 | 4 | 5 | 6 | 7;
     };
   }
+
+  // Add commonly used functions that might be causing issues
+  export function addDays(date: Date | number, amount: number): Date;
+  export function subDays(date: Date | number, amount: number): Date;
+  export function addMonths(date: Date | number, amount: number): Date;
+  export function subMonths(date: Date | number, amount: number): Date;
+  export function differenceInDays(dateLeft: Date | number, dateRight: Date | number): number;
+  export function differenceInHours(dateLeft: Date | number, dateRight: Date | number): number;
+  export function differenceInMinutes(dateLeft: Date | number, dateRight: Date | number): number;
+  export function isBefore(date: Date | number, dateToCompare: Date | number): boolean;
+  export function isAfter(date: Date | number, dateToCompare: Date | number): boolean;
 }

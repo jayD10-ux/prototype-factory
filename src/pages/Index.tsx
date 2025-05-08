@@ -2,9 +2,18 @@
 import { PrototypeGrid } from "@/components/prototype-grid";
 import { useSupabase } from "@/lib/supabase-provider";
 import Dashboard from "@/components/dashboard";
+import { useEffect } from "react";
 
 const Index = () => {
-  const { user, isLoading } = useSupabase();
+  const { user, isLoading, isLoaded } = useSupabase();
+
+  useEffect(() => {
+    console.log("Index page mounted, auth state:", {
+      authenticated: !!user,
+      isLoading,
+      isLoaded
+    });
+  }, [user, isLoading, isLoaded]);
 
   if (isLoading) {
     return (
