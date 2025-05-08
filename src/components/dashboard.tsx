@@ -21,11 +21,6 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
-            <Link to="/validation">
-              <Button variant="outline" size="sm">
-                Validation Tests
-              </Button>
-            </Link>
             {!isAuthenticated ? (
               <Link to="/auth">
                 <Button size="sm">Sign In</Button>
@@ -43,18 +38,6 @@ export default function Dashboard() {
       <div className="flex-1">
         <PrototypeGrid />
       </div>
-
-      {/* Add a nice footer with validation link */}
-      <footer className="bg-background py-6 border-t">
-        <div className="container mx-auto text-center">
-          <p className="text-muted-foreground text-sm">
-            Authentication migration validation tools available at the{" "}
-            <Link to="/validation" className="text-primary underline">
-              validation page
-            </Link>
-          </p>
-        </div>
-      </footer>
     </>
   );
 }

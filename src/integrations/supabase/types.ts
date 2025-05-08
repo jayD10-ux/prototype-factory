@@ -621,6 +621,10 @@ export type Database = {
         Args: { p_name: string; p_description: string; p_user_id: string }
         Returns: Json
       }
+      execute_sql_wrapper: {
+        Args: { sql_statement: string }
+        Returns: undefined
+      }
       get_current_clerk_user: {
         Args: { _table_clerk_id: string }
         Returns: boolean
@@ -636,6 +640,10 @@ export type Database = {
       get_profile_id_by_clerk_id: {
         Args: { _clerk_id: string }
         Returns: string
+      }
+      is_prototype_shared: {
+        Args: { prototype_id: string }
+        Returns: boolean
       }
       is_same_user_by_clerk_id: {
         Args: { _clerk_id: string }

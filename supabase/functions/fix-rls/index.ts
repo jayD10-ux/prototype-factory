@@ -68,6 +68,7 @@ serve(async (req) => {
     }
 
     // Create security definer function to check if a prototype is shared
+    // Fix: Using a more efficient security definer function that avoids recursion
     try {
       const { error: createHelperFunctionError } = await supabase.rpc('update_prototype_policies', {
         sql: `
@@ -78,8 +79,9 @@ serve(async (req) => {
           SECURITY DEFINER
           STABLE
           AS $$
+            -- Direct query to prototype_shares without referencing prototypes table
             SELECT EXISTS (
-              SELECT 1 FROM prototype_shares
+              SELECT 1 FROM public.prototype_shares
               WHERE prototype_shares.prototype_id = prototype_id 
               AND prototype_shares.is_public = true
             );
