@@ -9,6 +9,9 @@ import { supabase } from '@/integrations/supabase/client';
 interface SupabaseContextType {
   supabase: typeof supabase;
   session: Session | null;
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
@@ -19,31 +22,23 @@ export interface SupabaseProviderProps {
 }
 
 export function SupabaseProvider({ children, session: initialSession }: SupabaseProviderProps) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<Session | null>(initialSession);
+  const [user, setUser] = useState<User | null>(initialSession?.user || null);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     setSession(initialSession);
+    setUser(initialSession?.user || null);
+    setIsLoading(false);
   }, [initialSession]);
-
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (!session) {
-        navigate('/auth');
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
 
   const value = {
     session,
+    user,
     supabase,
+    isAuthenticated: !!user,
+    isLoading,
   };
 
   return (

@@ -21,7 +21,7 @@ export default function Auth() {
   const [activeTab, setActiveTab] = useState('login');
 
   // Check if there's a redirect path in localStorage
-  const redirectPath = localStorage.getItem('redirectAfterLogin') || '/dashboard';
+  const redirectPath = localStorage.getItem('redirectAfterLogin') || '/';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,6 +102,7 @@ export default function Auth() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -113,6 +114,7 @@ export default function Auth() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
+                    autoComplete="current-password"
                     required
                   />
                 </div>
@@ -138,6 +140,7 @@ export default function Auth() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -149,6 +152,7 @@ export default function Auth() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
+                    autoComplete="new-password"
                     required
                     minLength={6}
                   />

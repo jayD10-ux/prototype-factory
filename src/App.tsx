@@ -37,42 +37,6 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fix RLS when session is available
-  useEffect(() => {
-    const fixRLS = async () => {
-      if (!session?.access_token) return;
-
-      try {
-        // First check if the user is authenticated
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError || !user) {
-          console.error("User not authenticated");
-          return;
-        }
-
-        // Now try to fix RLS
-        const { data, error } = await supabase.functions.invoke('fix-rls', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-          },
-        });
-
-        if (error) {
-          console.error("Error fixing RLS:", error);
-        } else {
-          console.log("RLS fixed successfully:", data);
-        }
-      } catch (err) {
-        console.error("Error calling fix-rls function:", err);
-      }
-    };
-
-    fixRLS();
-  }, [session]);
-
   return (
     <ThemeProvider defaultTheme="light" storageKey="ui-theme">
       <QueryClientProvider client={queryClient}>

@@ -6,7 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       collections: {
@@ -38,6 +38,7 @@ export interface Database {
       }
       comments: {
         Row: {
+          clerk_id: string | null
           content: string
           created_at: string
           created_by: string
@@ -49,6 +50,7 @@ export interface Database {
           updated_at: string
         }
         Insert: {
+          clerk_id?: string | null
           content: string
           created_at?: string
           created_by: string
@@ -60,6 +62,7 @@ export interface Database {
           updated_at?: string
         }
         Update: {
+          clerk_id?: string | null
           content?: string
           created_at?: string
           created_by?: string
@@ -136,6 +139,7 @@ export interface Database {
       notifications: {
         Row: {
           actor_id: string | null
+          clerk_id: string | null
           comment_id: string | null
           content: string
           created_at: string
@@ -150,6 +154,7 @@ export interface Database {
         }
         Insert: {
           actor_id?: string | null
+          clerk_id?: string | null
           comment_id?: string | null
           content: string
           created_at?: string
@@ -164,6 +169,7 @@ export interface Database {
         }
         Update: {
           actor_id?: string | null
+          clerk_id?: string | null
           comment_id?: string | null
           content?: string
           created_at?: string
@@ -190,6 +196,7 @@ export interface Database {
         Row: {
           avatar_url: string | null
           bio: string | null
+          clerk_id: string | null
           created_at: string
           id: string
           name: string | null
@@ -199,6 +206,7 @@ export interface Database {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          clerk_id?: string | null
           created_at?: string
           id: string
           name?: string | null
@@ -208,26 +216,18 @@ export interface Database {
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          clerk_id?: string | null
           created_at?: string
           id?: string
           name?: string | null
           role?: string | null
           updated_at?: string
         }
-        Functions: {
-          create_project_with_owner: {
-            Args: { p_name: string; p_description: string; p_user_id: string }
-            Returns: Json
-          }
-          get_current_user_id: {
-            Args: Record<PropertyKey, never>
-            Returns: string
-          }
-        }
         Relationships: []
       }
       project_members: {
         Row: {
+          clerk_id: string | null
           created_at: string
           id: string
           project_id: string
@@ -235,6 +235,7 @@ export interface Database {
           user_id: string
         }
         Insert: {
+          clerk_id?: string | null
           created_at?: string
           id?: string
           project_id: string
@@ -242,6 +243,7 @@ export interface Database {
           user_id: string
         }
         Update: {
+          clerk_id?: string | null
           created_at?: string
           id?: string
           project_id?: string
@@ -260,6 +262,7 @@ export interface Database {
       }
       projects: {
         Row: {
+          clerk_id: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -268,6 +271,7 @@ export interface Database {
           updated_at: string
         }
         Insert: {
+          clerk_id?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -276,6 +280,7 @@ export interface Database {
           updated_at?: string
         }
         Update: {
+          clerk_id?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -320,6 +325,7 @@ export interface Database {
       }
       prototype_feedback: {
         Row: {
+          clerk_id: string | null
           content: string
           created_at: string | null
           created_by: string | null
@@ -334,6 +340,7 @@ export interface Database {
           updated_at: string | null
         }
         Insert: {
+          clerk_id?: string | null
           content: string
           created_at?: string | null
           created_by?: string | null
@@ -348,6 +355,7 @@ export interface Database {
           updated_at?: string | null
         }
         Update: {
+          clerk_id?: string | null
           content?: string
           created_at?: string | null
           created_by?: string | null
@@ -416,6 +424,7 @@ export interface Database {
       prototype_shares: {
         Row: {
           accessed_at: string | null
+          clerk_id: string | null
           created_at: string
           email: string | null
           id: string
@@ -427,6 +436,7 @@ export interface Database {
         }
         Insert: {
           accessed_at?: string | null
+          clerk_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -438,6 +448,7 @@ export interface Database {
         }
         Update: {
           accessed_at?: string | null
+          clerk_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -459,14 +470,17 @@ export interface Database {
       }
       prototype_tags: {
         Row: {
+          clerk_id: string | null
           prototype_id: string
           tag_id: string
         }
         Insert: {
+          clerk_id?: string | null
           prototype_id: string
           tag_id: string
         }
         Update: {
+          clerk_id?: string | null
           prototype_id?: string
           tag_id?: string
         }
@@ -490,6 +504,7 @@ export interface Database {
       prototypes: {
         Row: {
           bundle_path: string | null
+          clerk_id: string | null
           created_at: string
           created_by: string
           deployment_metadata: Json | null
@@ -514,6 +529,7 @@ export interface Database {
         }
         Insert: {
           bundle_path?: string | null
+          clerk_id?: string | null
           created_at?: string
           created_by: string
           deployment_metadata?: Json | null
@@ -538,6 +554,7 @@ export interface Database {
         }
         Update: {
           bundle_path?: string | null
+          clerk_id?: string | null
           created_at?: string
           created_by?: string
           deployment_metadata?: Json | null
@@ -599,54 +616,156 @@ export interface Database {
     Views: {
       [_ in never]: never
     }
+    Functions: {
+      create_project_with_owner: {
+        Args: { p_name: string; p_description: string; p_user_id: string }
+        Returns: Json
       }
-      Insert: {
-        accessed_at?: string | null
-        created_at?: string
-        email?: string | null
-        id?: string
-        is_link_share?: boolean
-        is_public?: boolean
-        permission?: string
-        prototype_id: string
-        shared_by: string
+      get_current_clerk_user: {
+        Args: { _table_clerk_id: string }
+        Returns: boolean
       }
-      Update: {
-        accessed_at?: string | null
-        created_at?: string
-        email?: string | null
-        id?: string
-        is_link_share?: boolean
-        is_public?: boolean
-        permission?: string
-        prototype_id?: string
-        shared_by?: string
+      get_current_user_clerk_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
-      Relationships: [
-        {
-          foreignKeyName: "prototype_shares_prototype_id_fkey"
-          columns: ["prototype_id"]
-          isOneToOne: false
-          referencedRelation: "prototypes"
-          referencedColumns: ["id"]
-        },
-      ]
+      get_current_user_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_profile_id_by_clerk_id: {
+        Args: { _clerk_id: string }
+        Returns: string
+      }
+      is_same_user_by_clerk_id: {
+        Args: { _clerk_id: string }
+        Returns: boolean
+      }
+      update_prototype_policies: {
+        Args: { sql: string }
+        Returns: undefined
+      }
+      update_share_policies: {
+        Args: { sql: string }
+        Returns: undefined
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }
 
-export type DefaultSchema = Database['public'];
+type DefaultSchema = Database[Extract<keyof Database, "public">]
 
-export type Tables<T extends keyof DefaultSchema['Tables']> = DefaultSchema['Tables'][T]['Row'];
-export type TablesInsert<T extends keyof DefaultSchema['Tables']> = DefaultSchema['Tables'][T]['Insert'];
-export type TablesUpdate<T extends keyof DefaultSchema['Tables']> = DefaultSchema['Tables'][T]['Update'];
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof Database },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
 
-export type Enums = Record<string, never>;
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof Database },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
 
-export type CompositeTypes = Record<string, never>;
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof Database },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof Database },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof Database },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
 
 export const Constants = {
   public: {
     Enums: {},
   },
-} as const;
+} as const
