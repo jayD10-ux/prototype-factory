@@ -1,56 +1,49 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import type { User, Session } from '@/types/supabase';
 import { supabase } from '@/integrations/supabase/client';
-import { SupabaseClient, Session, User } from '@supabase/supabase-js';
-import type { Database } from '@/integrations/supabase/types';
 
 interface SupabaseContextType {
-  supabase: SupabaseClient<Database>;
-  isAuthenticated: boolean;
+  supabase: typeof supabase;
   session: Session | null;
-  user: User | null;
 }
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
 
 export interface SupabaseProviderProps {
   children: React.ReactNode;
+  session: Session;
 }
 
-export function SupabaseProvider({ children }: SupabaseProviderProps) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export function SupabaseProvider({ children, session: initialSession }: SupabaseProviderProps) {
+  const [session, setSession] = useState<Session | null>(initialSession);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up the auth state listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, newSession) => {
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-        setIsLoading(false);
-      }
-    );
+    setSession(initialSession);
+  }, [initialSession]);
 
-    // Then check for an existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      setIsLoading(false);
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (!session) {
+        navigate('/auth');
+      }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const value = {
-    supabase,
-    isAuthenticated: !!user,
     session,
-    user
+    supabase,
   };
 
   return (
