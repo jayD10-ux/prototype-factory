@@ -27,8 +27,11 @@ export interface User {
 export interface Session {
   access_token: string;
   refresh_token: string;
-  expires_at: number;
-  expires_in: number;
+  expires_at?: number;
+  expires_in?: number;
+  token_type?: string;
+  provider_token?: string;
+  provider_refresh_token?: string;
   user: User;
 }
 

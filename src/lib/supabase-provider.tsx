@@ -15,11 +15,11 @@ const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined
 
 export interface SupabaseProviderProps {
   children: React.ReactNode;
-  session: Session;
+  session: Session | null;
 }
 
 export function SupabaseProvider({ children, session: initialSession }: SupabaseProviderProps) {
-  const [session, setSession] = useState<Session | null>(initialSession);
+  const [session, setSession] = useState<Session | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
