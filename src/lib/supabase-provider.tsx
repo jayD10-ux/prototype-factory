@@ -2,7 +2,6 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import type { User, Session } from '@/types/supabase';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -12,7 +11,7 @@ interface SupabaseContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  isLoaded: boolean; // Added isLoaded property
+  isLoaded: boolean;
 }
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
@@ -26,14 +25,13 @@ export function SupabaseProvider({ children, session: initialSession }: Supabase
   const [session, setSession] = useState<Session | null>(initialSession);
   const [user, setUser] = useState<User | null>(initialSession?.user || null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoaded, setIsLoaded] = useState(false); // Added isLoaded state
-  const navigate = useNavigate();
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     setSession(initialSession);
     setUser(initialSession?.user || null);
     setIsLoading(false);
-    setIsLoaded(true); // Set isLoaded to true once initialization is complete
+    setIsLoaded(true);
   }, [initialSession]);
 
   const value = {
@@ -42,7 +40,7 @@ export function SupabaseProvider({ children, session: initialSession }: Supabase
     supabase,
     isAuthenticated: !!user,
     isLoading,
-    isLoaded, // Include isLoaded in the context value
+    isLoaded,
   };
 
   return (
