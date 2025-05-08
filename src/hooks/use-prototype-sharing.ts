@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PrototypeShare, ShareFormData, LinkShareOptions } from '@/types/prototype-sharing';
 
 export function usePrototypeSharing(prototypeId: string) {
-  const { supabase, clerkId } = useSupabase();
+  const { supabase, user } = useSupabase();
   const { toast } = useToast();
   const [shares, setShares] = useState<PrototypeShare[]>([]);
   const [isLoadingShares, setIsLoadingShares] = useState(false);
@@ -84,7 +84,7 @@ export function usePrototypeSharing(prototypeId: string) {
         .from('prototype_shares')
         .insert({
           prototype_id: prototypeId,
-          shared_by: clerkId,
+          shared_by: user?.id,
           email: shareData.email,
           permission: shareData.permission,
           is_link_share: false,
@@ -111,7 +111,7 @@ export function usePrototypeSharing(prototypeId: string) {
     } finally {
       setIsCreatingShare(false);
     }
-  }, [prototypeId, clerkId, shares, supabase, toast, fetchShares]);
+  }, [prototypeId, user?.id, shares, supabase, toast, fetchShares]);
 
   // Update share permission
   const updateSharePermission = useCallback(async (shareId: string, permission: 'view' | 'edit' | 'admin') => {
@@ -166,7 +166,7 @@ export function usePrototypeSharing(prototypeId: string) {
           .from('prototype_shares')
           .insert({
             prototype_id: prototypeId,
-            shared_by: clerkId,
+            shared_by: user?.id,
             is_link_share: true,
             is_public: options.is_public,
             permission: options.permission,
@@ -192,7 +192,7 @@ export function usePrototypeSharing(prototypeId: string) {
     } finally {
       setIsUpdatingShare(false);
     }
-  }, [prototypeId, clerkId, supabase, toast, fetchShares, getLinkShare]);
+  }, [prototypeId, user?.id, supabase, toast, fetchShares, getLinkShare]);
 
   // Remove a share
   const removeShare = useCallback(async (shareId: string) => {

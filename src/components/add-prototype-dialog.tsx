@@ -1,4 +1,3 @@
-// Update the component to use isLoaded from the ClerkAuth context
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -6,8 +5,8 @@ import { UploadPrototypeDialog } from "./upload-prototype-dialog";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
-import { useClerkAuth } from "@/lib/clerk-provider";
 import { supabase } from "@/integrations/supabase/client";
+import { useSupabase } from "@/lib/supabase-provider";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,7 +21,7 @@ export function AddPrototypeDialog({
   onOpenChange,
 }: AddPrototypeDialogProps) {
   const [activeTab, setActiveTab] = useState<string>("upload");
-  const { isLoaded, isAuthenticated, user } = useClerkAuth();
+  const { isAuthenticated, user } = useSupabase();
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -34,7 +33,7 @@ export function AddPrototypeDialog({
   const [externalName, setExternalName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!isLoaded || !isAuthenticated) {
+  if (!isAuthenticated) {
     return null;
   }
 
@@ -56,7 +55,6 @@ export function AddPrototypeDialog({
         .insert({
           name: figmaName.trim(),
           created_by: user?.id,
-          clerk_id: user?.id,
           url: figmaUrl.trim(),
           figma_url: figmaUrl.trim(),
           deployment_status: "completed",
@@ -105,7 +103,6 @@ export function AddPrototypeDialog({
         .insert({
           name: externalName.trim(),
           created_by: user?.id,
-          clerk_id: user?.id,
           url: externalUrl.trim(),
           deployment_status: "completed",
           type: "external",

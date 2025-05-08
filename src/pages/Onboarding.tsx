@@ -9,51 +9,93 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useSupabase } from "@/lib/supabase-provider";
 import { ProfileUpdateForm } from "@/components/profile/profile-update-form";
-import { useClerkAuth } from "@/lib/clerk-provider";
 
 export default function Onboarding() {
-  const { user: clerkUser, isAuthenticated, isLoaded } = useClerkAuth();
+  const { supabase, user, isLoaded } = useSupabase();
+  const isAuthenticated = !!user;
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     const checkProfileCompletion = async () => {
-      // Wait for Clerk to initialize
+      // Wait for Supabase to initialize
       if (!isLoaded) {
         return;
       }
 
-      if (!isAuthenticated || !clerkUser) {
+      if (!isAuthenticated || !user) {
         navigate('/');
         return;
       }
 
       try {
-        const clerkId = clerkUser?.id;
+        const userId = user?.id;
         
-        if (!clerkId) {
+        if (!userId) {
           throw new Error("No user ID available");
         }
         
-        console.log("Checking profile for Clerk ID:", clerkId);
+        console.log("Checking profile for user ID:", userId);
         
-        // Try to find profile using clerk_id
+        // Try to find profile using user id
         const { data, error } = await supabase
           .from('profiles')
           .select('name')
-          .eq('clerk_id', clerkId)
+          .eq('id', userId)
           .maybeSingle();
           
         if (error) {
           console.error("Supabase query error:", error);
           throw error;
         }
-        
-        console.log("Profile data result:", data);
-        
+
+        if (!data) {
+          // Profile doesn't exist, create it
+          const { error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              name: user.user_metadata.full_name || '',
+              avatar_url: user.user_metadata.avatar_url || undefined,
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error("Error creating profile:", createError);
+            throw createError;
+          }
+
+          toast({
+            title: "Profile created",
+            description: "Your profile has been created successfully.",
+          });
+        } else {
+          // Profile exists, update it
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              name: user.user_metadata.full_name || '',
+              avatar_url: user.user_metadata.avatar_url || undefined,
+            })
+            .eq('id', userId)
+            .select()
+            .single();
+
+          if (updateError) {
+            console.error("Error updating profile:", updateError);
+            throw updateError;
+          }
+
+          toast({
+            title: "Profile updated",
+            description: "Your profile has been updated successfully.",
+          });
+        }
+
         // If we found a profile with a name, it's complete
         if (data?.name) {
           navigate('/dashboard');
@@ -71,7 +113,7 @@ export default function Onboarding() {
     };
 
     checkProfileCompletion();
-  }, [clerkUser, isAuthenticated, navigate, toast, isLoaded]);
+  }, [isAuthenticated, navigate, toast, isLoaded, supabase, user]);
 
   // Show a loading state until we know what to do
   if (!isLoaded || isLoading) {
@@ -86,7 +128,7 @@ export default function Onboarding() {
   }
 
   // If not authenticated, don't show anything (navigation happens in useEffect)
-  if (!isAuthenticated || !clerkUser) {
+  if (!isAuthenticated || !user) {
     return null;
   }
 

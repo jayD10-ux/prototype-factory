@@ -13,7 +13,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileAvatar } from "./profile/profile-avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSupabase } from "@/lib/supabase-provider";
-import { useClerkAuth } from "@/lib/clerk-provider";
 
 export const PrototypeGrid = () => {
   // State for view, sort, search and selection
@@ -26,7 +25,7 @@ export const PrototypeGrid = () => {
   const [activeTab, setActiveTab] = useState<"my" | "shared">("my");
   
   const { supabase } = useSupabase();
-  const { user } = useClerkAuth();
+  const { user } = useSupabase();
   const { toast } = useToast();
 
   // Query for collections with counts

@@ -1,18 +1,13 @@
 
 import { NotificationBell, PopoverNotificationCenter } from "@novu/notification-center";
 import { useNavigate } from "react-router-dom";
-import { useClerkAuth } from "@/lib/clerk-provider";
+import { useSupabase } from "@/lib/supabase-provider";
 import { useState, useEffect } from "react";
 
 export function NovuNotificationBell() {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoaded } = useClerkAuth();
+  const { isAuthenticated } = useSupabase();
   const [error, setError] = useState<Error | null>(null);
-  
-  // Don't render anything until auth is loaded
-  if (!isLoaded) {
-    return null;
-  }
   
   // If not authenticated, show an empty notification bell
   if (!isAuthenticated) {

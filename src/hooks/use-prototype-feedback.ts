@@ -1,9 +1,7 @@
 
-// Update imports to use both Supabase and Clerk
 import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSupabase } from "@/lib/supabase-provider";
-import { useClerkAuth } from "@/lib/clerk-provider";
 import { useToast } from "@/hooks/use-toast";
 import { notifyNewComment, notifyCommentReply, notifyCommentResolved } from "@/utils/notification-utils";
 
@@ -12,12 +10,11 @@ export function usePrototypeFeedback(prototypeId: string) {
   const [isFeedbackEnabled, setIsFeedbackEnabled] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<any | null>(null);
   
-  const { supabase, clerkId } = useSupabase();
-  const { user } = useClerkAuth();
+  const { supabase, user } = useSupabase();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const currentUserId = user?.id; // This is the Clerk ID
+  const currentUserId = user?.id;
 
   const enableFeedback = useCallback(async () => {
     setIsSubmitting(true);
@@ -94,7 +91,7 @@ export function usePrototypeFeedback(prototypeId: string) {
     try {
       const { data: prototype, error: prototypeError } = await supabase
         .from("prototypes")
-        .select("created_by, clerk_id, name")
+        .select("created_by, name")
         .eq("id", prototypeId)
         .single();
 
@@ -105,8 +102,7 @@ export function usePrototypeFeedback(prototypeId: string) {
         .insert({
           ...feedbackData,
           prototype_id: prototypeId,
-          created_by: currentUserId, // This is still expected as UUID
-          clerk_id: currentUserId, // Add the clerk_id
+          created_by: currentUserId,
         })
         .select()
         .single();
@@ -114,7 +110,7 @@ export function usePrototypeFeedback(prototypeId: string) {
       if (error) throw error;
 
       // Notify prototype owner if the commenter is not the owner
-      if (prototype.clerk_id !== currentUserId) {
+      if (prototype.created_by !== currentUserId) {
         await notifyNewComment(
           prototype.created_by, // Use legacy field for now
           currentUserId,
