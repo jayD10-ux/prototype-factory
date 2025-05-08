@@ -43,12 +43,23 @@ function App() {
       if (!session?.access_token) return;
 
       try {
+        // First check if the user is authenticated
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user) {
+          console.error("User not authenticated");
+          return;
+        }
+
+        // Now try to fix RLS
         const { data, error } = await supabase.functions.invoke('fix-rls', {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${session.access_token}`,
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
           },
         });
+
         if (error) {
           console.error("Error fixing RLS:", error);
         } else {
