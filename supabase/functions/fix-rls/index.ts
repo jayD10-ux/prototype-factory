@@ -20,60 +20,15 @@ serve(async (req) => {
 
     console.log("Running fix-rls function");
 
-    // First, drop existing policies for prototypes table
-    try {
-      await supabase
-        .from('prototypes')
-        .select('id')
-        .limit(1)
-        .then(() => {
-          console.log("Successfully connected to prototypes table");
-        });
-
-      // Drop existing policies directly with SQL
-      const { error: dropError } = await supabase.rpc('execute_sql_wrapper', {
-        sql_statement: `
-          -- Drop existing policies
-          DROP POLICY IF EXISTS "Users can view their own prototypes" ON public.prototypes;
-          DROP POLICY IF EXISTS "Users can view shared prototypes" ON public.prototypes;
-          DROP POLICY IF EXISTS "Users can update their own prototypes" ON public.prototypes;
-          DROP POLICY IF EXISTS "Users can insert prototypes" ON public.prototypes;
-          DROP POLICY IF EXISTS "Users can delete their own prototypes" ON public.prototypes;
-          
-          -- Make sure RLS is enabled
-          ALTER TABLE public.prototypes ENABLE ROW LEVEL SECURITY;
-        `
-      });
-
-      if (dropError) {
-        console.log("Warning when dropping policies:", dropError);
-        // Continue even if this fails
-      }
-    } catch (dropError) {
-      console.log("Error connecting to prototypes or dropping policies:", dropError);
-      // Continue execution even if this fails
-    }
-
-    // Create execute_sql_wrapper function if it doesn't exist
+    // First, check if the execute_sql_wrapper function exists
     try {
       const { error: createWrapperError } = await supabase.rpc('execute_sql_wrapper', {
-        sql_statement: `
-          -- Create the wrapper function if it doesn't exist
-          CREATE OR REPLACE FUNCTION public.execute_sql_wrapper(sql_statement text)
-          RETURNS void
-          LANGUAGE plpgsql
-          SECURITY DEFINER
-          AS $$
-          BEGIN
-            EXECUTE sql_statement;
-          END;
-          $$;
-        `
+        sql_statement: `SELECT 1;`
       });
 
       if (createWrapperError) {
-        // If the function doesn't exist yet, create it directly
-        const { error: createDirectError } = await supabase.sql(`
+        // Create the function if it doesn't exist
+        const { error: createFunctionError } = await supabase.sql(`
           CREATE OR REPLACE FUNCTION public.execute_sql_wrapper(sql_statement text)
           RETURNS void
           LANGUAGE plpgsql
@@ -85,17 +40,60 @@ serve(async (req) => {
           $$;
         `);
         
-        if (createDirectError) {
-          throw new Error(`Failed to create wrapper function: ${createDirectError.message}`);
+        if (createFunctionError) {
+          throw new Error(`Failed to create wrapper function: ${createFunctionError.message}`);
         }
       }
     } catch (error) {
-      console.log("Error creating wrapper function:", error);
-      // We need to handle this failure as it's critical
-      throw new Error(`Failed to create wrapper function: ${error.message}`);
+      console.log("Creating wrapper function:", error);
+      
+      // Create the function directly
+      const { error: createDirectError } = await supabase.sql(`
+        CREATE OR REPLACE FUNCTION public.execute_sql_wrapper(sql_statement text)
+        RETURNS void
+        LANGUAGE plpgsql
+        SECURITY DEFINER
+        AS $$
+        BEGIN
+          EXECUTE sql_statement;
+        END;
+        $$;
+      `);
+      
+      if (createDirectError) {
+        throw new Error(`Failed to create wrapper function: ${createDirectError.message}`);
+      }
     }
 
-    // Create new simplified policies
+    // Create security definer function to check if a prototype is shared
+    try {
+      const { error: createHelperFunctionError } = await supabase.rpc('execute_sql_wrapper', {
+        sql_statement: `
+          -- Create helper function to check if prototype is shared
+          CREATE OR REPLACE FUNCTION public.is_prototype_shared(prototype_id uuid)
+          RETURNS boolean
+          LANGUAGE sql
+          SECURITY DEFINER
+          STABLE
+          AS $$
+            SELECT EXISTS (
+              SELECT 1 FROM prototype_shares
+              WHERE prototype_shares.prototype_id = prototype_id 
+              AND prototype_shares.is_public = true
+            );
+          $$;
+        `
+      });
+
+      if (createHelperFunctionError) {
+        throw new Error(`Failed to create helper function: ${createHelperFunctionError.message}`);
+      }
+    } catch (error) {
+      console.error("Error creating helper function:", error);
+      throw error;
+    }
+
+    // Update policies for prototypes table using the helper function
     try {
       const { error: policiesError } = await supabase.rpc('execute_sql_wrapper', {
         sql_statement: `
@@ -113,45 +111,31 @@ serve(async (req) => {
           CREATE POLICY "Users can view their own prototypes" 
           ON public.prototypes
           FOR SELECT 
-          USING (
-            created_by = auth.uid()
-          );
+          USING (created_by = auth.uid());
 
-          -- Simple policy for viewing shared prototypes (public ones)
+          -- Fixed policy for viewing shared prototypes using the security definer function
           CREATE POLICY "Users can view shared prototypes" 
           ON public.prototypes
           FOR SELECT 
-          USING (
-            EXISTS (
-              SELECT 1 FROM prototype_shares
-              WHERE prototype_shares.prototype_id = prototypes.id 
-              AND prototype_shares.is_public = true
-            )
-          );
+          USING (public.is_prototype_shared(id));
 
           -- Simple policy for updating own prototypes
           CREATE POLICY "Users can update their own prototypes" 
           ON public.prototypes
           FOR UPDATE
-          USING (
-            created_by = auth.uid()
-          );
+          USING (created_by = auth.uid());
 
           -- Simple policy for inserting own prototypes
           CREATE POLICY "Users can insert prototypes" 
           ON public.prototypes
           FOR INSERT
-          WITH CHECK (
-            created_by = auth.uid()
-          );
+          WITH CHECK (created_by = auth.uid());
 
           -- Simple policy for deleting own prototypes
           CREATE POLICY "Users can delete their own prototypes" 
           ON public.prototypes
           FOR DELETE
-          USING (
-            created_by = auth.uid()
-          );
+          USING (created_by = auth.uid());
         `
       });
 
@@ -165,48 +149,39 @@ serve(async (req) => {
 
     console.log("Prototype policies created successfully");
 
-    // Fix prototype_shares RLS
+    // Also fix prototype_shares RLS with simpler policies
     try {
       const { error: sharesPoliciesError } = await supabase.rpc('execute_sql_wrapper', {
         sql_statement: `
           -- Make sure RLS is enabled
           ALTER TABLE IF EXISTS public.prototype_shares ENABLE ROW LEVEL SECURITY;
 
-          -- Drop existing possibly problematic policies
+          -- Drop existing policies
           DROP POLICY IF EXISTS "Users can view their own shares" ON public.prototype_shares;
           DROP POLICY IF EXISTS "Users can create shares" ON public.prototype_shares;
           DROP POLICY IF EXISTS "Users can update their own shares" ON public.prototype_shares;
           DROP POLICY IF EXISTS "Users can delete their own shares" ON public.prototype_shares;
 
-          -- Simpler policies using auth.uid()
+          -- Simple policies using auth.uid()
           CREATE POLICY "Users can view their own shares" 
           ON public.prototype_shares
           FOR SELECT 
-          USING (
-            shared_by = auth.uid()
-            OR is_public = true
-          );
+          USING (shared_by = auth.uid() OR is_public = true);
 
           CREATE POLICY "Users can create shares" 
           ON public.prototype_shares
           FOR INSERT
-          WITH CHECK (
-            shared_by = auth.uid()
-          );
+          WITH CHECK (shared_by = auth.uid());
 
           CREATE POLICY "Users can update their own shares" 
           ON public.prototype_shares
           FOR UPDATE
-          USING (
-            shared_by = auth.uid()
-          );
+          USING (shared_by = auth.uid());
 
           CREATE POLICY "Users can delete their own shares" 
           ON public.prototype_shares
           FOR DELETE
-          USING (
-            shared_by = auth.uid()
-          );
+          USING (shared_by = auth.uid());
         `
       });
 

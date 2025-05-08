@@ -1,10 +1,22 @@
 
 declare module 'date-fns' {
-  // Basic date-fns functions used in the project
-  export function format(date: Date | number, format: string, options?: object): string;
-  export function formatDistance(date: Date | number, baseDate: Date | number, options?: object): string;
-  export function formatRelative(date: Date | number, baseDate: Date | number, options?: object): string;
-  export function isToday(date: Date | number): boolean;
-  export function isYesterday(date: Date | number): boolean;
-  export function parseISO(dateString: string): Date;
+  export function formatDistance(date: Date | number, baseDate: Date | number, options?: {
+    includeSeconds?: boolean;
+    addSuffix?: boolean;
+    locale?: Locale;
+  }): string;
+
+  export function formatDistanceToNow(date: Date | number, options?: {
+    includeSeconds?: boolean;
+    addSuffix?: boolean;
+    locale?: Locale;
+  }): string;
+
+  export function format(date: Date | number, format: string, options?: {
+    locale?: Locale;
+    weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+    firstWeekContainsDate?: number;
+    useAdditionalWeekYearTokens?: boolean;
+    useAdditionalDayOfYearTokens?: boolean;
+  }): string;
 }

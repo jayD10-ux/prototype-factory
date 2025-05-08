@@ -12,6 +12,7 @@ interface SupabaseContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isLoaded: boolean; // Added isLoaded property
 }
 
 const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
@@ -25,12 +26,14 @@ export function SupabaseProvider({ children, session: initialSession }: Supabase
   const [session, setSession] = useState<Session | null>(initialSession);
   const [user, setUser] = useState<User | null>(initialSession?.user || null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoaded, setIsLoaded] = useState(false); // Added isLoaded state
   const navigate = useNavigate();
 
   useEffect(() => {
     setSession(initialSession);
     setUser(initialSession?.user || null);
     setIsLoading(false);
+    setIsLoaded(true); // Set isLoaded to true once initialization is complete
   }, [initialSession]);
 
   const value = {
@@ -39,6 +42,7 @@ export function SupabaseProvider({ children, session: initialSession }: Supabase
     supabase,
     isAuthenticated: !!user,
     isLoading,
+    isLoaded, // Include isLoaded in the context value
   };
 
   return (
