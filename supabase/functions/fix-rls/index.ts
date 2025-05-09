@@ -13,43 +13,19 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Starting fix-rls function execution");
+    
     // Create a Supabase client with the Admin key
     const supabaseUrl = Deno.env.get("SUPABASE_URL") as string;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log("Running fix-rls function");
+    console.log("Supabase client created");
 
-    // First, check if the execute_sql_wrapper function exists
+    // First, create a more robust version of the execute_sql_wrapper function
+    console.log("Step 1: Creating SQL wrapper function");
     try {
-      const { error: checkWrapperError } = await supabase.rpc('execute_sql_wrapper', {
-        sql_statement: `SELECT 1;`
-      });
-
-      if (checkWrapperError) {
-        // Create the function if it doesn't exist
-        const { error: createFunctionError } = await supabase.rpc('update_prototype_policies', {
-          sql: `
-          CREATE OR REPLACE FUNCTION public.execute_sql_wrapper(sql_statement text)
-          RETURNS void
-          LANGUAGE plpgsql
-          SECURITY DEFINER
-          AS $$
-          BEGIN
-            EXECUTE sql_statement;
-          END;
-          $$;
-        `});
-        
-        if (createFunctionError) {
-          throw new Error(`Failed to create wrapper function: ${createFunctionError.message}`);
-        }
-      }
-    } catch (error) {
-      console.log("Creating wrapper function:", error);
-      
-      // Create the function directly using another existing function
-      const { error: createDirectError } = await supabase.rpc('update_prototype_policies', {
+      const { error: wrapperError } = await supabase.rpc('update_prototype_policies', {
         sql: `
         CREATE OR REPLACE FUNCTION public.execute_sql_wrapper(sql_statement text)
         RETURNS void
@@ -62,42 +38,59 @@ serve(async (req) => {
         $$;
       `});
       
-      if (createDirectError) {
-        throw new Error(`Failed to create wrapper function: ${createDirectError.message}`);
+      if (wrapperError) {
+        console.error("Error creating wrapper function:", wrapperError);
+        throw wrapperError;
       }
+      console.log("SQL wrapper function created successfully");
+    } catch (error) {
+      console.error("Failed to create SQL wrapper:", error);
+      throw error;
     }
 
-    // Create security definer function to check if a prototype is shared
-    // Fix: Using a more efficient security definer function that avoids recursion
+    // Fix the is_prototype_shared function to be more explicit and avoid recursion
+    console.log("Step 2: Creating improved is_prototype_shared function");
     try {
-      const { error: createHelperFunctionError } = await supabase.rpc('update_prototype_policies', {
+      const { error: helperFunctionError } = await supabase.rpc('update_prototype_policies', {
         sql: `
-          -- Create helper function to check if prototype is shared
-          CREATE OR REPLACE FUNCTION public.is_prototype_shared(prototype_id uuid)
+          -- Drop existing function to ensure clean replacement
+          DROP FUNCTION IF EXISTS public.is_prototype_shared(uuid);
+          
+          -- Create a more explicit version that avoids recursion
+          CREATE OR REPLACE FUNCTION public.is_prototype_shared(_input_prototype_id uuid)
           RETURNS boolean
-          LANGUAGE sql
+          LANGUAGE plpgsql
           SECURITY DEFINER
           STABLE
           AS $$
-            -- Direct query to prototype_shares without referencing prototypes table
+          DECLARE
+            _is_shared boolean;
+          BEGIN
+            -- Use explicit aliasing and parameter names that don't match column names
             SELECT EXISTS (
-              SELECT 1 FROM public.prototype_shares
-              WHERE prototype_shares.prototype_id = prototype_id 
-              AND prototype_shares.is_public = true
-            );
+              SELECT 1 FROM public.prototype_shares AS ps
+              WHERE ps.prototype_id = _input_prototype_id 
+              AND ps.is_public = true
+            ) INTO _is_shared;
+            
+            RETURN _is_shared;
+          END;
           $$;
         `
       });
 
-      if (createHelperFunctionError) {
-        throw new Error(`Failed to create helper function: ${createHelperFunctionError.message}`);
+      if (helperFunctionError) {
+        console.error("Error creating helper function:", helperFunctionError);
+        throw new Error(`Failed to create helper function: ${helperFunctionError.message}`);
       }
+      console.log("Helper function created successfully");
     } catch (error) {
-      console.error("Error creating helper function:", error);
+      console.error("Failed to create helper function:", error);
       throw error;
     }
 
-    // Update policies for prototypes table using the helper function
+    // Update policies for prototypes table using the improved helper function
+    console.log("Step 3: Setting up RLS policies for prototypes table");
     try {
       const { error: policiesError } = await supabase.rpc('update_prototype_policies', {
         sql: `
@@ -117,11 +110,11 @@ serve(async (req) => {
           FOR SELECT 
           USING (created_by = auth.uid());
 
-          -- Fixed policy for viewing shared prototypes using the security definer function
+          -- Fixed policy for viewing shared prototypes using the improved function
           CREATE POLICY "Users can view shared prototypes" 
           ON public.prototypes
           FOR SELECT 
-          USING (public.is_prototype_shared(id));
+          USING (public.is_prototype_shared(_input_prototype_id := id));
 
           -- Simple policy for updating own prototypes
           CREATE POLICY "Users can update their own prototypes" 
@@ -144,16 +137,17 @@ serve(async (req) => {
       });
 
       if (policiesError) {
+        console.error("Error creating prototype policies:", policiesError);
         throw new Error(`Failed to create prototype policies: ${policiesError.message}`);
       }
+      console.log("Prototype policies created successfully");
     } catch (createError) {
       console.error("Error creating prototype policies:", createError);
       throw createError;
     }
 
-    console.log("Prototype policies created successfully");
-
-    // Also fix prototype_shares RLS with simpler policies
+    // Fix prototype_shares RLS with simpler policies
+    console.log("Step 4: Setting up RLS policies for prototype_shares table");
     try {
       const { error: sharesPoliciesError } = await supabase.rpc('update_share_policies', {
         sql: `
@@ -190,14 +184,14 @@ serve(async (req) => {
       });
 
       if (sharesPoliciesError) {
+        console.error("Error updating share policies:", sharesPoliciesError);
         throw new Error(`Failed to update share policies: ${sharesPoliciesError.message}`);
       }
+      console.log("Share policies created successfully");
     } catch (sharesError) {
       console.error("Error creating share policies:", sharesError);
       throw sharesError;
     }
-
-    console.log("Share policies created successfully");
 
     // Return success response
     return new Response(

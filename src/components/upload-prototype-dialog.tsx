@@ -45,7 +45,11 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log("[UploadPrototype] Starting upload process");
+    console.log("[UploadPrototype] Auth state:", { isAuthenticated, userId: user?.id });
+    
     if (!isAuthenticated || !user) {
+      console.error("[UploadPrototype] Authentication required but user not authenticated");
       toast({
         title: "Authentication required",
         description: "Please sign in to upload prototypes",
@@ -55,6 +59,7 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
     }
 
     if (!prototypeName.trim()) {
+      console.error("[UploadPrototype] No prototype name provided");
       toast({
         title: "Name required",
         description: "Please enter a name for your prototype",
@@ -64,6 +69,7 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
     }
 
     if (!acceptedFiles.length) {
+      console.error("[UploadPrototype] No file selected");
       toast({
         title: "File required",
         description: "Please upload a HTML/ZIP file",
@@ -76,11 +82,16 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
     setIsLoading(true);
 
     try {
+      console.log("[UploadPrototype] Processing file:", file.name, "type:", file.type);
+      
       // If ZIP file, validate it first
       if (file.type === 'application/zip') {
+        console.log("[UploadPrototype] Validating ZIP file");
         try {
           await validatePrototypeZip(file);
+          console.log("[UploadPrototype] ZIP validation successful");
         } catch (error: any) {
+          console.error("[UploadPrototype] ZIP validation failed:", error);
           toast({
             title: "Invalid ZIP file",
             description: error.message || "The ZIP file doesn't contain valid web content",
@@ -94,7 +105,7 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
       const fileName = `${Date.now()}-${file.name}`;
       const filePath = `${user.id}/${fileName}`;
       
-      console.log("Uploading file to path:", filePath);
+      console.log("[UploadPrototype] Uploading file to path:", filePath);
       
       // Upload file to storage
       const { error: uploadError } = await supabase
@@ -103,12 +114,12 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
         .upload(filePath, file);
 
       if (uploadError) {
-        console.error("Storage upload error:", uploadError);
+        console.error("[UploadPrototype] Storage upload error:", uploadError);
         throw uploadError;
       }
 
-      console.log("File uploaded successfully, now inserting prototype record");
-      console.log("Current user:", user);
+      console.log("[UploadPrototype] File uploaded successfully, inserting prototype record");
+      console.log("[UploadPrototype] User ID for record:", user.id);
       
       // Insert prototype record with Supabase user ID
       const { data: prototype, error: insertError } = await supabase
@@ -125,10 +136,12 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
         .single();
 
       if (insertError) {
-        console.error("Database insert error:", insertError);
+        console.error("[UploadPrototype] Database insert error:", insertError);
         throw insertError;
       }
 
+      console.log("[UploadPrototype] Prototype record created:", prototype);
+      
       toast({
         title: "Success",
         description: "Prototype uploaded successfully. Processing will begin shortly.",
@@ -143,7 +156,7 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
       navigate(`/prototype/${prototype.id}`);
 
     } catch (error: any) {
-      console.error("Error uploading prototype:", error);
+      console.error("[UploadPrototype] Error uploading prototype:", error);
       toast({
         title: "Upload failed",
         description: error.message || "Failed to upload prototype",
