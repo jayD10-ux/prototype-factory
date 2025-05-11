@@ -7,6 +7,9 @@ import { FeedbackOverlay } from './feedback/FeedbackOverlay';
 import { cn } from '@/lib/utils';
 import '@/styles/sandpack-fix.css';
 import '@/styles/PreviewIframe.css';
+import { FeedbackPoint } from '@/types/feedback';
+import { supabase } from '@/integrations/supabase/client';
+import { useSupabase } from '@/lib/supabase-provider';
 
 interface SandpackPreviewProps {
   files: string;  // URL to the ZIP file
@@ -29,6 +32,126 @@ export function SandpackPreview({ files, mainFile, prototypeId, onShare, onDownl
   const [deviceType, setDeviceType] = useState<DeviceType>('desktop');
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [scale, setScale] = useState(1);
+  const [feedbackPoints, setFeedbackPoints] = useState<FeedbackPoint[]>([]);
+  const [feedbackUsers, setFeedbackUsers] = useState<Record<string, any>>({});
+  const { user } = useSupabase();
+
+  useEffect(() => {
+    if (prototypeId) {
+      fetchFeedbackPoints();
+    }
+  }, [prototypeId]);
+
+  const fetchFeedbackPoints = async () => {
+    try {
+      const { data: feedbacks, error } = await supabase
+        .from('comments')
+        .select('*, profiles:created_by(*)')
+        .eq('prototype_id', prototypeId);
+
+      if (error) throw error;
+
+      const users: Record<string, any> = {};
+      const points = feedbacks.map((feedback: any) => {
+        users[feedback.created_by] = feedback.profiles;
+        return {
+          id: feedback.id,
+          prototype_id: feedback.prototype_id,
+          position: feedback.position,
+          content: feedback.content,
+          created_by: feedback.created_by,
+          created_at: feedback.created_at,
+          updated_at: feedback.updated_at,
+          status: feedback.status || 'open',
+          element_target: feedback.element_target || {
+            selector: feedback.element_selector,
+            xpath: feedback.element_xpath,
+            metadata: feedback.element_metadata
+          },
+          device_info: feedback.device_info || {
+            type: feedback.device_type || 'desktop',
+            width: window.innerWidth,
+            height: window.innerHeight,
+            orientation: 'portrait'
+          }
+        };
+      });
+
+      setFeedbackPoints(points);
+      setFeedbackUsers(users);
+    } catch (error: any) {
+      console.error('Error fetching feedback:', error);
+      toast.error('Failed to load feedback points');
+    }
+  };
+
+  const handleFeedbackAdded = async (feedback: FeedbackPoint) => {
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .insert([
+          {
+            prototype_id: prototypeId,
+            content: feedback.content,
+            position: feedback.position,
+            created_by: user?.id,
+            status: feedback.status,
+            device_info: feedback.device_info,
+            element_target: feedback.element_target
+          }
+        ])
+        .select('*, profiles:created_by(*)')
+        .single();
+
+      if (error) throw error;
+
+      const newFeedback: FeedbackPoint = {
+        ...feedback,
+        id: data.id,
+        created_by: data.created_by,
+        created_at: data.created_at,
+        updated_at: null,
+        prototype_id: prototypeId
+      };
+
+      setFeedbackPoints(prev => [...prev, newFeedback]);
+      setFeedbackUsers(prev => ({
+        ...prev,
+        [data.created_by]: data.profiles
+      }));
+
+      toast.success('Feedback added successfully');
+    } catch (error: any) {
+      console.error('Error adding feedback:', error);
+      toast.error('Failed to add feedback');
+    }
+  };
+
+  const handleFeedbackUpdated = async (feedback: FeedbackPoint) => {
+    try {
+      const { error } = await supabase
+        .from('comments')
+        .update({
+          content: feedback.content,
+          status: feedback.status,
+          position: feedback.position,
+          device_info: feedback.device_info,
+          element_target: feedback.element_target
+        })
+        .eq('id', feedback.id);
+
+      if (error) throw error;
+
+      setFeedbackPoints(prev =>
+        prev.map(f => (f.id === feedback.id ? feedback : f))
+      );
+
+      toast.success('Feedback updated successfully');
+    } catch (error: any) {
+      console.error('Error updating feedback:', error);
+      toast.error('Failed to update feedback');
+    }
+  };
 
   useEffect(() => {
     async function loadContent() {
@@ -179,7 +302,24 @@ export function SandpackPreview({ files, mainFile, prototypeId, onShare, onDownl
         {isFeedbackMode && prototypeId && (
           <FeedbackOverlay
             prototypeId={prototypeId}
+            isFeedbackMode={isFeedbackMode}
+            deviceType={deviceType}
+            orientation={orientation}
+            scale={scale}
+            originalDimensions={{
+              width: deviceType === 'mobile' ? 375 : deviceType === 'tablet' ? 768 : window.innerWidth,
+              height: deviceType === 'mobile' ? 667 : deviceType === 'tablet' ? 1024 : window.innerHeight
+            }}
             onClose={() => setIsFeedbackMode(false)}
+            feedbackPoints={feedbackPoints}
+            onFeedbackAdded={handleFeedbackAdded}
+            onFeedbackUpdated={handleFeedbackUpdated}
+            feedbackUsers={feedbackUsers}
+            currentUser={user ? {
+              id: user.id,
+              name: user.user_metadata?.name || user.email,
+              avatar_url: user.user_metadata?.avatar_url
+            } : undefined}
           />
         )}
       </div>

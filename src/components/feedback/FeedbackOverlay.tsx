@@ -31,6 +31,7 @@ interface FeedbackOverlayProps {
     width: number;
     height: number;
   };
+  onClose: () => void;
 }
 
 interface SupabaseFeedbackResponse {
