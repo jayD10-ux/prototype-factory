@@ -642,7 +642,7 @@ export type Database = {
         Returns: string
       }
       is_prototype_shared: {
-        Args: { prototype_id: string }
+        Args: { prototype_uuid: string }
         Returns: boolean
       }
       is_same_user_by_clerk_id: {
