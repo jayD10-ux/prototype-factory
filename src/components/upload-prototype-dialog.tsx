@@ -77,14 +77,25 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
     try {
       console.log("[UploadPrototype] Processing file:", file.name, "type:", file.type);
       
-      // If ZIP file, validate it first
+      // Process the file based on type
+      let mainFile = '';
       if (file.type === 'application/zip') {
-        console.log("[UploadPrototype] Validating ZIP file");
+        console.log("[UploadPrototype] Processing ZIP file");
         try {
-          await validatePrototypeZip(file);
-          console.log("[UploadPrototype] ZIP validation successful");
+          const zip = await JSZip.loadAsync(file);
+          const files = Object.keys(zip.files);
+          
+          // Find index.html in root or first HTML file
+          mainFile = files.find(f => f === 'index.html') || 
+                     files.find(f => f.endsWith('.html')) || '';
+          
+          if (!mainFile) {
+            throw new Error("No HTML file found in ZIP");
+          }
+          
+          console.log("[UploadPrototype] Main file found:", mainFile);
         } catch (error: any) {
-          console.error("[UploadPrototype] ZIP validation failed:", error);
+          console.error("[UploadPrototype] ZIP processing failed:", error);
           toast({
             title: "Invalid ZIP file",
             description: error.message || "The ZIP file doesn't contain valid web content",
@@ -93,6 +104,9 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
           setIsLoading(false);
           return;
         }
+      } else {
+        // For direct HTML files
+        mainFile = file.name;
       }
 
 
@@ -121,11 +135,12 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
         .from('prototypes')
         .insert({
           name: prototypeName.trim(),
-          url: '',  // Empty string instead of null to satisfy TypeScript
+          url: '',
           file_path: filePath,
+          main_file: mainFile,  // Store the main HTML file path
           type: 'upload',
-          deployment_status: 'pending',
-          created_by: null  // Explicitly set to null since we're not using auth
+          deployment_status: 'ready',  // Set to ready since we don't need deployment
+          created_by: null
         })
         .select();
 
