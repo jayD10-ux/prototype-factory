@@ -17,9 +17,7 @@ export const PrototypeDetail = () => {
   const navigate = useNavigate();
   const [processingTimeout, setProcessingTimeout] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
-  const { supabase, user } = useSupabase();
-  
-  const currentUserId = user?.id;
+  const { supabase } = useSupabase();
 
   const { 
     data: prototype, 
@@ -45,44 +43,22 @@ export const PrototypeDetail = () => {
         throw error;
       }
 
-      // Check if prototype is shared with the current user
-      if (data && currentUserId && data.created_by !== currentUserId) {
-        // Check if user has access via share
-        const { data: shareData, error: shareError } = await supabase
-          .from('prototype_shares' as any)
-          .select('*')
-          .eq('prototype_id', id)
-          .or(`email.eq.${user?.email},is_public.eq.true`);
-        
-        if (shareError || !shareData || shareData.length === 0) {
-          toast({
-            variant: "destructive",
-            title: "Access denied",
-            description: "You don't have permission to view this prototype"
-          });
-          throw new Error("Access denied");
-        }
-        
-        // Update access timestamp
-        const typedShareData = shareData as unknown as PrototypeShare[];
-        if (typedShareData[0] && typedShareData[0].id) {
-          await supabase
-            .from('prototype_shares' as any)
-            .update({ accessed_at: new Date().toISOString() })
-            .eq('id', typedShareData[0].id);
-        }
+      // All prototypes are public now
+      if (!data) {
+        toast({
+          variant: "destructive",
+          title: "Prototype not found",
+          description: "The prototype you're looking for doesn't exist or has been deleted."
+        });
+        throw new Error("Prototype not found");
       }
 
       return data;
     },
-    enabled: !!id && !!currentUserId
+    enabled: !!id
   });
 
-  useEffect(() => {
-    if (!user && !isLoading) {
-      navigate('/auth');
-    }
-  }, [user, isLoading, navigate]);
+
 
   const handleShare = useCallback(() => {
     setShowShareDialog(true);
@@ -130,30 +106,22 @@ export const PrototypeDetail = () => {
     );
   }
 
-  // Check if current user is the creator of the prototype
-  const isCreator = currentUserId === prototype.created_by;
-  const creatorName = prototype.profiles?.name || 'Anonymous';
-  const creatorAvatar = prototype.profiles?.avatar_url;
+  const creatorName = 'Anonymous';
+  const isCreator = false;
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden">
       {/* Only show creator info if the viewer is not the creator */}
-      {!isCreator && (
-        <div className="bg-background p-2 flex items-center border-b">
-          <div className="flex items-center gap-2">
-            <Avatar className="h-7 w-7">
-              {creatorAvatar ? (
-                <AvatarImage src={creatorAvatar} alt={creatorName} />
-              ) : (
-                <AvatarFallback>
-                  <User className="h-4 w-4" />
-                </AvatarFallback>
-              )}
-            </Avatar>
-            <span className="text-sm font-medium">Created by {creatorName}</span>
-          </div>
+      <div className="bg-background p-2 flex items-center border-b">
+        <div className="flex items-center gap-2">
+          <Avatar className="h-7 w-7">
+            <AvatarFallback>
+              <User className="h-4 w-4" />
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-sm font-medium">Public Prototype</span>
         </div>
-      )}
+      </div>
       
       <div className="flex-1 min-h-0 relative">
         <div className="absolute inset-0">

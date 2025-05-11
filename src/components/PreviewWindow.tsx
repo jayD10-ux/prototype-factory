@@ -36,39 +36,29 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
         return;
       }
 
-      // Check if the prototype has a deployment URL in the database
+      // Get prototype details
       const { data: prototype, error: prototypeError } = await supabase
         .from('prototypes')
-        .select('*')
+        .select('name, file_path, deployment_status, deployment_url')
         .eq('id', prototypeId)
         .single();
 
       if (prototypeError) {
-        console.error('Error fetching prototype details:', prototypeError);
-        setUseSandpack(true);
+        console.error('Error fetching prototype:', prototypeError);
+        setLoadError("Failed to load prototype");
         return;
       }
 
-      console.log("Prototype data:", prototype);
-      
-      // Set prototype name if available
-      if (prototype && prototype.name) {
-        setPrototypeName(prototype.name);
+      if (!prototype) {
+        setLoadError("Prototype not found");
+        return;
       }
 
-      // Check if figma_url exists in the data
-      let figmaUrlValue = null;
-      try {
-        // Try to access figma_url using a type-safe approach
-        figmaUrlValue = (prototype as any).figma_url;
-      } catch (e) {
-        console.warn("figma_url column not found in prototype data");
-      }
-      
-      setFigmaUrl(figmaUrlValue);
+      // Set prototype name
+      setPrototypeName(prototype.name || 'Untitled');
 
-      // If the prototype has a file_path, get the file URL
-      if (prototype && prototype.file_path) {
+      // Get file URL if available
+      if (prototype.file_path) {
         const { data: { publicUrl } } = await supabase
           .storage
           .from('prototype-uploads')
@@ -77,17 +67,13 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
         setFilesUrl(publicUrl);
       }
 
-      // If the prototype is deployed and has a URL, use it
-      if (prototype && prototype.deployment_status === 'deployed' && prototype.deployment_url) {
-        console.log("Using deployment URL:", prototype.deployment_url);
+      // Set preview URL based on deployment status
+      if (prototype.deployment_status === 'deployed' && prototype.deployment_url) {
         setPreviewUrl(prototype.deployment_url);
-      } else if (prototype && prototype.file_path) {
-        // If not deployed but has a file path, use Sandpack
-        console.log("Using Sandpack for preview");
+      } else if (prototype.file_path) {
         setUseSandpack(true);
       } else {
-        // No URL or file path available
-        setLoadError("No preview available for this prototype");
+        setLoadError("No preview available");
       }
     } catch (error) {
       console.error("Error loading preview:", error);
