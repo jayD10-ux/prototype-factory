@@ -20,30 +20,12 @@ interface UploadPrototypeDialogProps {
 export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [prototypeName, setPrototypeName] = useState("");
-  const [authChecked, setAuthChecked] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { isAuthenticated, user, supabase } = useSupabase();
+  const { supabase } = useSupabase();
 
-  useEffect(() => {
-    // Perform once-only auth check when component mounts
-    const checkAuth = async () => {
-      if (!isAuthenticated || !user) {
-        console.error("[UploadPrototype] No authenticated user detected");
-        toast({
-          title: "Authentication required",
-          description: "You must be signed in to upload prototypes",
-          variant: "destructive",
-        });
-      } else {
-        console.log("[UploadPrototype] Authenticated as user:", user.id);
-      }
-      setAuthChecked(true);
-    };
-    
-    checkAuth();
-  }, [isAuthenticated, user, toast]);
+
 
   const { getRootProps, getInputProps, isDragActive, acceptedFiles } = useDropzone({
     maxFiles: 1,
@@ -67,16 +49,7 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
     
     console.log("[UploadPrototype] Starting upload process");
     
-    // Double-check authentication
-    if (!isAuthenticated || !user) {
-      console.error("[UploadPrototype] Authentication required but user not authenticated");
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to upload prototypes",
-        variant: "destructive",
-      });
-      return;
-    }
+
 
     if (!prototypeName.trim()) {
       console.error("[UploadPrototype] No prototype name provided");
@@ -122,26 +95,13 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
         }
       }
 
-      // Call fix-rls function to ensure RLS policies are set up correctly
-      try {
-        console.log("[UploadPrototype] Calling fix-rls function before upload");
-        const { data: rlsData, error: rlsError } = await supabase.functions.invoke('fix-rls');
-        if (rlsError) {
-          console.error("[UploadPrototype] Error fixing RLS:", rlsError);
-          // Continue anyway, it might work
-        } else {
-          console.log("[UploadPrototype] RLS fix result:", rlsData);
-        }
-      } catch (rlsErr) {
-        console.error("[UploadPrototype] Error invoking fix-rls:", rlsErr);
-        // Continue anyway
-      }
 
-      const fileName = `${Date.now()}-${file.name}`;
-      const filePath = `${user.id}/${fileName}`;
+
+      const timestamp = Date.now();
+      const fileName = `${timestamp}-${file.name}`;
+      const filePath = `uploads/${timestamp}/${fileName}`;
       
       console.log("[UploadPrototype] Uploading file to path:", filePath);
-      console.log("[UploadPrototype] Current user ID:", user.id);
       
       // Upload file to storage
       const { error: uploadError } = await supabase
@@ -156,16 +116,16 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
 
       console.log("[UploadPrototype] File uploaded successfully, inserting prototype record");
       
-      // Insert prototype record with explicit user ID
+      // Insert prototype record
       const { data: prototype, error: insertError } = await supabase
         .from('prototypes')
         .insert({
           name: prototypeName.trim(),
-          created_by: user.id,
-          url: null,  // Will be set by processing function
+          url: '',  // Empty string instead of null to satisfy TypeScript
           file_path: filePath,
           type: 'upload',
           deployment_status: 'pending',
+          created_by: null  // Explicitly set to null since we're not using auth
         })
         .select();
 
@@ -262,7 +222,7 @@ export function UploadPrototypeDialog({ onUpload }: UploadPrototypeDialogProps) 
           <Button variant="outline" type="button" onClick={onUpload} disabled={isLoading}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isLoading || !authChecked}>
+          <Button type="submit" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
