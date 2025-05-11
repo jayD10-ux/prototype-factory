@@ -37,38 +37,40 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
       }
 
       // Get prototype details
-      const { data, error: prototypeError } = await supabase
+      const { data: prototype, error: prototypeError } = await supabase
         .from('prototypes')
-        .select('name, file_path, main_file')
+        .select('name, file_path, deployment_status, deployment_url')
         .eq('id', prototypeId)
         .single();
 
-      if (prototypeError || !data) {
-        console.error('Error fetching prototype:', prototypeError);
+      if (prototypeError) {
+        throw prototypeError;
+      }
+
+      if (!prototype) {
+        console.error('Error fetching prototype: no data');
         setLoadError("Failed to load prototype");
         return;
       }
 
-      // Set prototype name and main file
-      setPrototypeName(data.name || 'Untitled');
-      setMainFile(data.main_file || 'index.html');
+      setPrototypeName(prototype.name);
+      setMainFile('index.html'); // Default to index.html since we don't have main_file column yet
 
-      // Get file URL if available
-      if (data.file_path) {
-        const { data: { publicUrl } } = await supabase
+      if (prototype.file_path) {
+        const { data } = await supabase
           .storage
           .from('prototype-uploads')
-          .getPublicUrl(data.file_path);
-        
-        // For ZIP files, we need to extract and serve the main file
-        if (data.file_path.endsWith('.zip')) {
+          .getPublicUrl(prototype.file_path);
+
+        setFilesUrl(data.publicUrl);
+
+        if (prototype.file_path.endsWith('.zip')) {
           // We'll use SandpackPreview for ZIP files
           setUseSandpack(true);
         } else {
           // For direct HTML files, we can use the URL directly
-          setPreviewUrl(publicUrl);
+          setPreviewUrl(data.publicUrl);
         }
-        setFilesUrl(publicUrl);
       } else {
         setLoadError("No preview available");
       }
@@ -122,6 +124,13 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
           <SandpackPreview 
             files={filesUrl || ''}
             mainFile={mainFile}
+            prototypeId={prototypeId}
+            onShare={handleShare}
+            onDownload={() => {
+              if (filesUrl) {
+                window.open(filesUrl, '_blank');
+              }
+            }}
           />
         </div>
         
