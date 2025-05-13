@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileAvatar } from "./profile/profile-avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSupabase } from "@/lib/supabase-provider";
-import { PrototypeCard } from "./PrototypeCard";
+import { PrototypeCard } from "./PrototypeCard";  // Make sure we import from the capitalized filename
 
 interface PrototypeGridProps {
   feedbackMode?: boolean;
@@ -35,7 +35,7 @@ export function PrototypeGrid({ feedbackMode = false }: PrototypeGridProps) {
   const { toast } = useToast();
 
   // Query for collections with counts
-  const { data: collections = [] } = useQuery<CollectionWithCount[]>({
+  const { data: collections = [] } = useQuery({
     queryKey: ['collections-with-counts'],
     queryFn: async () => {
       try {
