@@ -14,10 +14,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileAvatar } from "./profile/profile-avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSupabase } from "@/lib/supabase-provider";
-import { PrototypeCard } from "./PrototypeCard";  // Make sure we import from the capitalized filename
+import { PrototypeCard } from "./PrototypeCard";  // Import from the capitalized filename
 
 interface PrototypeGridProps {
   feedbackMode?: boolean;
+}
+
+// Define a local prototype interface that matches our PrototypeCard component's expectations
+interface LocalPrototype {
+  id: string;
+  name: string;
+  description?: string;
+  deployment_url?: string;
+  bundle_path?: string;
+  status?: string;
+  is_public?: boolean;
+  icon?: string;
+  device_width?: number;
+  device_height?: number;
+  sandbox_config?: {
+    permissions: string[];
+  };
+  // Add any other properties needed
+  created_at?: string;
+  created_by?: string;
 }
 
 export function PrototypeGrid({ feedbackMode = false }: PrototypeGridProps) {
@@ -109,6 +129,23 @@ export function PrototypeGrid({ feedbackMode = false }: PrototypeGridProps) {
     );
   }
 
+  // Ensure prototypes have the correct sandbox_config structure
+  const normalizedPrototypes = prototypes.map(prototype => {
+    // Ensure sandbox_config has permissions property
+    const sandbox_config = prototype.sandbox_config ? {
+      permissions: Array.isArray(prototype.sandbox_config.permissions) 
+        ? prototype.sandbox_config.permissions 
+        : ['allow-scripts', 'allow-same-origin']
+    } : {
+      permissions: ['allow-scripts', 'allow-same-origin']
+    };
+    
+    return {
+      ...prototype,
+      sandbox_config
+    } as LocalPrototype;
+  });
+
   return (
     <div className="container mx-auto py-8 px-4">
       <Tabs 
@@ -145,7 +182,7 @@ export function PrototypeGrid({ feedbackMode = false }: PrototypeGridProps) {
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-            {prototypes.map((prototype) => (
+            {normalizedPrototypes.map((prototype) => (
               <PrototypeCard 
                 key={prototype.id} 
                 prototype={prototype} 

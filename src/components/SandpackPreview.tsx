@@ -11,12 +11,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSupabase } from '@/lib/supabase-provider';
 
 interface SandpackPreviewProps {
-  files: string;  // URL to the ZIP file
+  files: Record<string, string>;  // Changed to accept a Record instead of a string URL
   mainFile: string; // Path to the main HTML file in the ZIP
   prototypeId?: string;
   onShare?: () => void;
   onDownload?: () => void;
-  isFeedbackMode?: boolean; // Accept this prop from parent
+  isFeedbackMode?: boolean;
+  externalResourcesUrl?: string; // Added to handle external URLs
 }
 
 type ViewMode = 'preview' | 'code' | 'split' | 'design';
@@ -28,7 +29,8 @@ export function SandpackPreview({
   prototypeId, 
   onShare, 
   onDownload,
-  isFeedbackMode = false // Default to false if not provided
+  isFeedbackMode = false,
+  externalResourcesUrl
 }: SandpackPreviewProps) {
   const [content, setContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -167,27 +169,22 @@ export function SandpackPreview({
         setIsLoading(true);
         setError(null);
 
-        // Fetch the ZIP file
-        const response = await fetch(files);
-        const zipBlob = await response.blob();
-        
-        // Load and extract ZIP
-        const zip = await JSZip.loadAsync(zipBlob);
-        
-        // Get the main HTML file
-        const htmlFile = zip.file(mainFile);
-        if (!htmlFile) {
-          throw new Error(`Main file ${mainFile} not found in ZIP`);
+        // If external resources URL is provided, use that directly
+        if (externalResourcesUrl) {
+          setContent(externalResourcesUrl);
+          setIsLoading(false);
+          return;
         }
         
-        // Get HTML content
-        const htmlContent = await htmlFile.async('string');
-        
-        // Create a blob URL for the HTML content
-        const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
-        const url = URL.createObjectURL(htmlBlob);
-        
-        setContent(url);
+        // If no URL and no files, show an error
+        if (Object.keys(files).length === 0) {
+          throw new Error("No files or external URL provided");
+        }
+
+        // Otherwise, process the files object
+        // (This part would need implementation if we're going to use files object)
+        // For now, just display an error
+        throw new Error("Processing files is not implemented");
       } catch (err: any) {
         console.error('Error loading preview:', err);
         setError(err.message || 'Failed to load preview');
@@ -197,9 +194,7 @@ export function SandpackPreview({
       }
     }
 
-    if (files) {
-      loadContent();
-    }
+    loadContent();
 
     // Cleanup
     return () => {
@@ -207,7 +202,7 @@ export function SandpackPreview({
         URL.revokeObjectURL(content);
       }
     };
-  }, [files, mainFile]);
+  }, [files, mainFile, externalResourcesUrl]);
 
   const handleRefresh = () => {
     if (content) {

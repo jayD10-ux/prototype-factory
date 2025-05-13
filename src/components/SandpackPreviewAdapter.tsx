@@ -44,12 +44,9 @@ export const SandpackPreviewAdapter = ({
     }
   }, [user, isAuthenticated]);
 
-  // Pass the required files prop as an empty object if iframeSrc is provided
-  const filesObject = iframeSrc ? {} : files;
-
   return (
     <SandpackPreview 
-      files={filesObject} 
+      files={files} 
       mainFile={activeFile || "index.html"} 
       prototypeId={prototypeId}
       isFeedbackMode={enableFeedback}
