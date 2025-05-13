@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AddPrototypeDialog } from "./add-prototype-dialog";
@@ -14,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileAvatar } from "./profile/profile-avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSupabase } from "@/lib/supabase-provider";
-import { PrototypeCard } from "./PrototypeCard";  // Import from the capitalized filename
+import { PrototypeCard } from "./PrototypeCard";
 
 interface PrototypeGridProps {
   feedbackMode?: boolean;
@@ -35,7 +34,6 @@ interface LocalPrototype {
   sandbox_config?: {
     permissions: string[];
   };
-  // Add any other properties needed
   created_at?: string;
   created_by?: string;
 }
@@ -187,7 +185,6 @@ export function PrototypeGrid({ feedbackMode = false }: PrototypeGridProps) {
                 key={prototype.id} 
                 prototype={prototype} 
                 onDeleteSuccess={handleDeleteSuccess}
-                feedbackMode={feedbackMode}
               />
             ))}
           </div>

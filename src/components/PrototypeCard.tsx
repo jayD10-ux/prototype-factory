@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from './ui/badge';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { PrototypePreview } from './PrototypePreview';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -30,20 +31,23 @@ interface Prototype {
 interface PrototypeCardProps {
   prototype: Prototype;
   onDeleteSuccess?: () => void;
-  feedbackMode?: boolean;
 }
 
 export function PrototypeCard({ 
   prototype, 
-  onDeleteSuccess,
-  feedbackMode = false
+  onDeleteSuccess
 }: PrototypeCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleEdit = () => {
     // Simplified edit handler
     console.log("Edit prototype:", prototype.id);
+  };
+
+  const handleView = () => {
+    navigate(`/prototype/${prototype.id}`);
   };
 
   const handleDelete = async () => {
@@ -57,7 +61,7 @@ export function PrototypeCard({
       
       if (error) throw error;
       
-      toast({
+      useToast().toast({
         title: "Success",
         description: "Prototype deleted successfully.",
       });
@@ -66,7 +70,7 @@ export function PrototypeCard({
         onDeleteSuccess();
       }
     } catch (error: any) {
-      toast({
+      useToast().toast({
         variant: "destructive",
         title: "Error",
         description: error.message || "Failed to delete prototype.",
@@ -78,7 +82,7 @@ export function PrototypeCard({
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden cursor-pointer" onClick={handleView}>
       <div className="relative aspect-video overflow-hidden">
         <div className="absolute top-2 left-2 z-10">
           {prototype.status === 'draft' && (
@@ -100,7 +104,6 @@ export function PrototypeCard({
                 width: prototype.device_width || 1920,
                 height: prototype.device_height || 1080
               }}
-              feedbackMode={feedbackMode}
             />
           </div>
         )}
@@ -140,19 +143,19 @@ export function PrototypeCard({
         </div>
         
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
             <Button variant="ghost" className="h-8 w-8 p-0">
               <span className="sr-only">Open menu</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleEdit}>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(); }}>
               <Pencil className="mr-2 h-4 w-4" />
               <span>Edit</span>
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => setIsDeleteOpen(true)}
+              onClick={(e) => { e.stopPropagation(); setIsDeleteOpen(true); }}
               className="text-red-500 focus:text-red-500"
             >
               <Trash2 className="mr-2 h-4 w-4" />
@@ -163,7 +166,7 @@ export function PrototypeCard({
       </CardFooter>
 
       {isDeleteOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
           <div className="bg-background rounded-lg p-6 max-w-md w-full">
             <h3 className="text-lg font-medium mb-2">Delete Prototype</h3>
             <p className="text-muted-foreground mb-4">

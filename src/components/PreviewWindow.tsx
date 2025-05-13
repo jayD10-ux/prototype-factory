@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
@@ -21,6 +22,7 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [prototypeName, setPrototypeName] = useState<string>('Prototype');
   const [mainFile, setMainFile] = useState<string>('index.html');
+  const [isFeedbackMode, setIsFeedbackMode] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const isMobile = useIsMobile();
   
@@ -99,6 +101,11 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
     setShowShareDialog(true);
   }, []);
 
+  // Toggle feedback mode
+  const toggleFeedbackMode = useCallback(() => {
+    setIsFeedbackMode(prev => !prev);
+  }, []);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -131,6 +138,8 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
                 window.open(filesUrl, '_blank');
               }
             }}
+            isFeedbackMode={isFeedbackMode}
+            onToggleFeedbackMode={toggleFeedbackMode}
           />
         </div>
         

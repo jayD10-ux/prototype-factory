@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
@@ -11,12 +12,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSupabase } from '@/lib/supabase-provider';
 
 interface SandpackPreviewProps {
-  files: Record<string, string>;  // Changed to accept a Record instead of a string URL
+  files: string | Record<string, string>;  // Can now accept either a string URL or files object
   mainFile: string; // Path to the main HTML file in the ZIP
   prototypeId?: string;
   onShare?: () => void;
   onDownload?: () => void;
   isFeedbackMode?: boolean;
+  onToggleFeedbackMode?: () => void;
   externalResourcesUrl?: string; // Added to handle external URLs
 }
 
@@ -30,6 +32,7 @@ export function SandpackPreview({
   onShare, 
   onDownload,
   isFeedbackMode = false,
+  onToggleFeedbackMode,
   externalResourcesUrl
 }: SandpackPreviewProps) {
   const [content, setContent] = useState<string>('');
@@ -45,6 +48,11 @@ export function SandpackPreview({
   const [feedbackPoints, setFeedbackPoints] = useState<FeedbackPoint[]>([]);
   const [feedbackUsers, setFeedbackUsers] = useState<Record<string, any>>({});
   const { user } = useSupabase();
+
+  // Update local state when prop changes
+  useEffect(() => {
+    setIsFeedbackModeActive(isFeedbackMode);
+  }, [isFeedbackMode]);
 
   useEffect(() => {
     if (prototypeId) {
@@ -163,6 +171,15 @@ export function SandpackPreview({
     }
   };
 
+  // Handle toggle feedback mode
+  const handleToggleFeedback = () => {
+    const newState = !isFeedbackModeActive;
+    setIsFeedbackModeActive(newState);
+    if (onToggleFeedbackMode) {
+      onToggleFeedbackMode();
+    }
+  };
+
   useEffect(() => {
     async function loadContent() {
       try {
@@ -176,15 +193,24 @@ export function SandpackPreview({
           return;
         }
         
-        // If no URL and no files, show an error
-        if (Object.keys(files).length === 0) {
-          throw new Error("No files or external URL provided");
+        // Check if files is a string URL
+        if (typeof files === 'string') {
+          setContent(files);
+          setIsLoading(false);
+          return;
+        }
+        
+        // If it's an object, process it as files
+        if (typeof files === 'object' && Object.keys(files).length > 0) {
+          // Process files logic would go here
+          console.log("Processing files object:", files);
+          setContent("about:blank"); // Placeholder
+          setIsLoading(false);
+          return;
         }
 
-        // Otherwise, process the files object
-        // (This part would need implementation if we're going to use files object)
-        // For now, just display an error
-        throw new Error("Processing files is not implemented");
+        // No valid content
+        throw new Error("No valid files or external URL provided");
       } catch (err: any) {
         console.error('Error loading preview:', err);
         setError(err.message || 'Failed to load preview');
@@ -259,7 +285,7 @@ export function SandpackPreview({
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
           isFeedbackMode={isFeedbackModeActive}
-          onToggleFeedbackMode={() => setIsFeedbackModeActive(prev => !prev)}
+          onToggleFeedbackMode={handleToggleFeedback}
           showUI={showUI}
           onToggleUI={() => setShowUI(prev => !prev)}
           deviceType={deviceType}
@@ -271,7 +297,7 @@ export function SandpackPreview({
           onRefresh={handleRefresh}
           onShare={onShare}
           onDownload={onDownload}
-          filesUrl={files}
+          filesUrl={typeof files === 'string' ? files : ''}
         />
       )}
 

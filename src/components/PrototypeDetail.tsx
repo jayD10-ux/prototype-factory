@@ -9,7 +9,6 @@ import { RefreshCw, AlertTriangle, User } from "lucide-react";
 import { Button } from "./ui/button";
 import { useSupabase } from "@/lib/supabase-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { PrototypeShare } from "@/types/prototype-sharing";
 
 export const PrototypeDetail = () => {
   const { id } = useParams();
@@ -58,8 +57,6 @@ export const PrototypeDetail = () => {
     enabled: !!id
   });
 
-
-
   const handleShare = useCallback(() => {
     setShowShareDialog(true);
   }, []);
@@ -106,7 +103,7 @@ export const PrototypeDetail = () => {
     );
   }
 
-  const creatorName = 'Anonymous';
+  const creatorName = prototype.profiles?.name || 'Anonymous';
   const isCreator = false;
 
   return (
