@@ -15,6 +15,7 @@ interface PrototypePreviewProps {
     width: number;
     height: number;
   };
+  feedbackMode?: boolean;
 }
 
 export const PrototypePreview: React.FC<PrototypePreviewProps> = ({
@@ -24,7 +25,8 @@ export const PrototypePreview: React.FC<PrototypePreviewProps> = ({
   filesUrl,
   onDownload,
   onShare,
-  originalDimensions = { width: 1920, height: 1080 } // Default dimensions
+  originalDimensions = { width: 1920, height: 1080 },
+  feedbackMode = false
 }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [aspectRatio, setAspectRatio] = useState(originalDimensions.width / originalDimensions.height);
@@ -119,6 +121,7 @@ export const PrototypePreview: React.FC<PrototypePreviewProps> = ({
             height: '100%',
           }}
           data-device-type={deviceType}
+          data-feedback-mode={feedbackMode ? "enabled" : "disabled"}
         />
       </div>
     </div>

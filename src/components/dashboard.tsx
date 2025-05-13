@@ -6,9 +6,12 @@ import { NotificationBell } from "./notification/notification-bell";
 import { Link } from "react-router-dom";
 import { Button } from "./ui/button";
 import { useSupabase } from "@/lib/supabase-provider";
+import { useState } from "react";
+import { MessageSquare } from "lucide-react";
 
 export default function Dashboard() {
   const { isAuthenticated, session } = useSupabase();
+  const [feedbackEnabled, setFeedbackEnabled] = useState(false);
 
   return (
     <>
@@ -21,6 +24,17 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
+            <Button 
+              variant={feedbackEnabled ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setFeedbackEnabled(!feedbackEnabled)}
+              title={feedbackEnabled ? "Disable feedback mode" : "Enable feedback mode"}
+              className="flex items-center gap-1"
+            >
+              <MessageSquare className="h-4 w-4" />
+              {feedbackEnabled ? "Feedback Mode On" : "Feedback Mode"}
+            </Button>
+
             {!isAuthenticated ? (
               <Link to="/auth">
                 <Button size="sm">Sign In</Button>
@@ -36,7 +50,7 @@ export default function Dashboard() {
       </header>
 
       <div className="flex-1">
-        <PrototypeGrid />
+        <PrototypeGrid feedbackMode={feedbackEnabled} />
       </div>
     </>
   );

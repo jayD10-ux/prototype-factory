@@ -506,7 +506,7 @@ export type Database = {
           bundle_path: string | null
           clerk_id: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           deployment_metadata: Json | null
           deployment_provider: string | null
           deployment_status: string | null
@@ -514,6 +514,7 @@ export type Database = {
           figma_url: string | null
           file_path: string | null
           id: string
+          main_file: string | null
           name: string
           preview_description: string | null
           preview_image: string | null
@@ -525,13 +526,13 @@ export type Database = {
           status: string | null
           type: string | null
           updated_at: string
-          url: string
+          url: string | null
         }
         Insert: {
           bundle_path?: string | null
           clerk_id?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           deployment_metadata?: Json | null
           deployment_provider?: string | null
           deployment_status?: string | null
@@ -539,6 +540,7 @@ export type Database = {
           figma_url?: string | null
           file_path?: string | null
           id?: string
+          main_file?: string | null
           name: string
           preview_description?: string | null
           preview_image?: string | null
@@ -550,13 +552,13 @@ export type Database = {
           status?: string | null
           type?: string | null
           updated_at?: string
-          url: string
+          url?: string | null
         }
         Update: {
           bundle_path?: string | null
           clerk_id?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           deployment_metadata?: Json | null
           deployment_provider?: string | null
           deployment_status?: string | null
@@ -564,6 +566,7 @@ export type Database = {
           figma_url?: string | null
           file_path?: string | null
           id?: string
+          main_file?: string | null
           name?: string
           preview_description?: string | null
           preview_image?: string | null
@@ -575,7 +578,7 @@ export type Database = {
           status?: string | null
           type?: string | null
           updated_at?: string
-          url?: string
+          url?: string | null
         }
         Relationships: [
           {

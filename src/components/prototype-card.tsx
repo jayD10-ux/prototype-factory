@@ -1,180 +1,178 @@
-
-import { format, parseISO } from "date-fns";
-import { MessageSquare, Edit, ArrowUpRight, Check } from "lucide-react";
-import { Link } from "react-router-dom";
-import { PrototypeStatusBadge } from "./prototype-status-badge";
-import { useState } from "react";
-import { EditPrototypeDialog } from "./edit-prototype-dialog";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import type { Prototype } from "@/types/prototype";
-import { cn } from "@/lib/utils";
-import { PrototypePreviewThumbnail } from "./prototype-preview-thumbnail";
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { deletePrototype } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
+import { useSupabase } from "@/lib/supabase-provider";
+import { PrototypePreview } from './PrototypePreview';
+import { Badge } from './ui/badge';
+import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
+import { useDashboard } from '@/hooks/use-dashboard';
+import { usePrototyping } from '@/hooks/use-prototyping';
+import { useToastContext } from '@/components/ui/use-toast-context';
+import { useFeedback } from '@/hooks/use-feedback';
+import { useShare } from '@/hooks/use-share';
+import { useDownload } from '@/hooks/use-download';
+import { useDeviceType } from '@/hooks/use-device-type';
+import { getDeviceIcon } from '@/utils/icons';
+import { Prototype } from '@/types';
 
 interface PrototypeCardProps {
   prototype: Prototype;
-  onSelect?: (prototype: Prototype) => void;
-  isSelected?: boolean;
-  collectionId?: string;
-  showCreator?: boolean;
-  disableSelection?: boolean;
+  onDeleteSuccess?: () => void;
+  feedbackMode?: boolean;
 }
 
 export function PrototypeCard({ 
   prototype, 
-  onSelect, 
-  isSelected, 
-  collectionId,
-  showCreator = false,
-  disableSelection = false
+  onDeleteSuccess,
+  feedbackMode = false
 }: PrototypeCardProps) {
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
-  
-  const { data: feedbackCount = 0 } = useQuery({
-    queryKey: ['prototype-feedback-count', prototype.id],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('prototype_feedback')
-        .select('id', { count: 'exact' })
-        .eq('prototype_id', prototype.id);
-        
-      if (error) throw error;
-      return count || 0;
-    }
-  });
+  const { user } = useSupabase();
+  const queryClient = useQueryClient();
+  const { setPrototypeId } = useDashboard();
+  const { setIsEditorOpen } = usePrototyping();
+  const { toast } = useToastContext();
+  const { confirmDelete } = useFeedback();
+  const { handleShare } = useShare();
+  const { handleDownload } = useDownload();
+  const deviceType = useDeviceType();
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-  if (!prototype) return null;
-  
-  const timestamp = prototype.created_at ? parseISO(prototype.created_at) : new Date();
+  const { mutate: deleteProto, isLoading: isDeleting } = useMutation(
+    () => deletePrototype(prototype.id),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['prototypes']);
+        toast({
+          title: "Success",
+          description: "Prototype deleted successfully.",
+        });
+        onDeleteSuccess?.();
+      },
+      onError: (error: any) => {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message || "Failed to delete prototype.",
+        });
+      },
+    }
+  );
 
-  const handleSelectClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (onSelect && !disableSelection) {
-      onSelect(prototype);
-    }
-  };
-
-  // Determine which URL to use for the "View" link
-  const getViewUrl = () => {
-    if (prototype.type === 'figma' && prototype.figma_url) {
-      return prototype.figma_url;
-    }
-    if (prototype.type === 'external') {
-      return prototype.url;
-    }
-    return prototype.deployment_url;
+  const handleEdit = () => {
+    setPrototypeId(prototype.id);
+    setIsEditorOpen(true);
   };
 
   return (
-    <>
-      <div 
-        className={cn(
-          "group relative bg-card rounded-lg border hover:shadow-md transition-all duration-200",
-          "hover:border-primary/20",
-          isSelected && "ring-2 ring-primary ring-offset-2"
-        )}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
-      >
-        <Link 
-          to={`/prototype/${prototype.id}${collectionId ? `?fromCollection=${collectionId}` : ''}`}
-          className="block relative"
-        >
-          {/* Preview Thumbnail */}
-          <div className="relative w-full h-40 rounded-t-lg overflow-hidden">
-            <PrototypePreviewThumbnail prototype={prototype} />
-          </div>
-
-          {/* Selection Check and Edit Button section */}
-          {onSelect && !disableSelection && (isHovering || isSelected) && (
-            <div 
-              className={cn(
-                "absolute top-3 right-3 z-20 p-1.5 rounded-full cursor-pointer transition-all duration-200",
-                isSelected 
-                  ? "bg-primary text-primary-foreground" 
-                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-              )}
-              onClick={handleSelectClick}
-            >
-              <Check className="w-3 h-3" />
-            </div>
+    <Card className="overflow-hidden">
+      <div className="relative aspect-video overflow-hidden">
+        <div className="absolute top-2 left-2 z-10">
+          {prototype.status === 'draft' && (
+            <Badge variant="secondary">Draft</Badge>
           )}
-
-          {/* Edit Button - Positioned in top-right when hovering */}
-          {isHovering && !disableSelection && (
-            <div 
-              className="absolute top-3 left-3 z-20 transition-opacity duration-200 opacity-100"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setShowEditDialog(true);
+          {prototype.is_public && (
+            <Badge variant="default">Public</Badge>
+          )}
+        </div>
+        
+        {prototype.deployment_url && (
+          <div className="absolute inset-0">
+            <PrototypePreview 
+              deploymentUrl={prototype.deployment_url} 
+              className="h-full"
+              filesUrl={prototype.bundle_path || undefined}
+              onShare={handleShare}
+              onDownload={handleDownload}
+              sandboxConfig={prototype.sandbox_config as any}
+              feedbackMode={feedbackMode}
+              originalDimensions={{
+                width: prototype.device_width || 1920,
+                height: prototype.device_height || 1080
               }}
-            >
-              <button className="p-1.5 bg-card/90 backdrop-blur-sm rounded-full border shadow-sm hover:shadow-md transition-all">
-                <Edit className="w-3.5 h-3.5 text-muted-foreground" />
-              </button>
+            />
+          </div>
+        )}
+        
+        {!prototype.deployment_url && (
+          <div className="absolute inset-0 flex items-center justify-center bg-muted">
+            <span className="text-muted-foreground">No preview available</span>
+          </div>
+        )}
+      </div>
+      
+      <CardHeader>
+        <div className="flex items-center">
+          {prototype.icon ? (
+            <Avatar className="mr-3 h-8 w-8">
+              <AvatarImage src={prototype.icon} alt={prototype.name} />
+              <AvatarFallback>{prototype.name.substring(0, 2)}</AvatarFallback>
+            </Avatar>
+          ) : (
+            <div className="mr-3 h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
+              <span className="text-secondary-foreground font-semibold">{prototype.name.substring(0, 1)}</span>
             </div>
           )}
+          <CardTitle className="text-lg font-semibold truncate">{prototype.name}</CardTitle>
+        </div>
+      </CardHeader>
 
-          {/* Main Card Content */}
-          <div className="p-5 space-y-4">
-            {/* Header Section */}
-            <div className="flex items-start justify-between">
-              <h3 className="font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2">
-                {prototype.name}
-              </h3>
-              
-              {/* Status Badge */}
-              {prototype.deployment_status && (
-                <div className="ml-2 flex-shrink-0">
-                  <PrototypeStatusBadge status={prototype.deployment_status} />
-                </div>
-              )}
-            </div>
-            
-            {/* Metadata Section */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <time dateTime={timestamp.toISOString()}>
-                  {format(timestamp, "MMM d, yyyy")}
-                </time>
-                
-                {feedbackCount > 0 && (
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-secondary/50 rounded-full">
-                    <MessageSquare className="w-3 h-3" />
-                    <span>{feedbackCount}</span>
-                  </div>
-                )}
-              </div>
-              
-              {/* View Link - Different behavior based on prototype type */}
-              {getViewUrl() && (
-                <div className="flex-shrink-0">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      window.open(getViewUrl(), '_blank', 'noopener,noreferrer');
-                    }}
-                    className="flex items-center gap-1 text-primary hover:underline transition-colors text-xs"
-                  >
-                    View
-                    <ArrowUpRight className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </Link>
-      </div>
+      <CardContent className="flex-1 p-4">
+        <div className="text-sm text-muted-foreground line-clamp-3">
+          {prototype.description || 'No description'}
+        </div>
+      </CardContent>
 
-      <EditPrototypeDialog
-        open={showEditDialog}
-        onOpenChange={setShowEditDialog}
-        prototype={prototype}
+      <CardFooter className="flex items-center justify-between p-4">
+        <div className="flex items-center gap-2">
+          {prototype.created_by && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              {getDeviceIcon(deviceType)}
+              {deviceType}
+            </div>
+          )}
+        </div>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleEdit}>
+              <Pencil className="mr-2 h-4 w-4" />
+              <span>Edit</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setIsDeleteOpen(true)}
+              className="text-red-500 focus:text-red-500"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              <span>Delete</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </CardFooter>
+
+      <ConfirmDeleteDialog
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        onConfirm={() => {
+          deleteProto();
+          setIsDeleteOpen(false);
+        }}
+        isLoading={isDeleting}
+        itemType="prototype"
+        itemName={prototype.name}
       />
-    </>
+    </Card>
   );
 }

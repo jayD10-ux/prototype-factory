@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
@@ -17,17 +16,26 @@ interface SandpackPreviewProps {
   prototypeId?: string;
   onShare?: () => void;
   onDownload?: () => void;
+  isFeedbackMode?: boolean; // Accept this prop from parent
 }
 
 type ViewMode = 'preview' | 'code' | 'split' | 'design';
 type DeviceType = 'desktop' | 'tablet' | 'mobile';
 
-export function SandpackPreview({ files, mainFile, prototypeId, onShare, onDownload }: SandpackPreviewProps) {
+export function SandpackPreview({ 
+  files, 
+  mainFile, 
+  prototypeId, 
+  onShare, 
+  onDownload,
+  isFeedbackMode = false // Default to false if not provided
+}: SandpackPreviewProps) {
   const [content, setContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('preview');
-  const [isFeedbackMode, setIsFeedbackMode] = useState(false);
+  // Instead of initializing as false, use the prop
+  const [isFeedbackModeActive, setIsFeedbackModeActive] = useState(isFeedbackMode);
   const [showUI, setShowUI] = useState(true);
   const [deviceType, setDeviceType] = useState<DeviceType>('desktop');
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
@@ -255,8 +263,8 @@ export function SandpackPreview({ files, mainFile, prototypeId, onShare, onDownl
         <PreviewControls
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
-          isFeedbackMode={isFeedbackMode}
-          onToggleFeedbackMode={() => setIsFeedbackMode(prev => !prev)}
+          isFeedbackMode={isFeedbackModeActive}
+          onToggleFeedbackMode={() => setIsFeedbackModeActive(prev => !prev)}
           showUI={showUI}
           onToggleUI={() => setShowUI(prev => !prev)}
           deviceType={deviceType}
@@ -299,10 +307,10 @@ export function SandpackPreview({ files, mainFile, prototypeId, onShare, onDownl
           </div>
         </div>
 
-        {isFeedbackMode && prototypeId && (
+        {isFeedbackModeActive && prototypeId && (
           <FeedbackOverlay
             prototypeId={prototypeId}
-            isFeedbackMode={isFeedbackMode}
+            isFeedbackMode={isFeedbackModeActive}
             deviceType={deviceType}
             orientation={orientation}
             scale={scale}
@@ -310,7 +318,7 @@ export function SandpackPreview({ files, mainFile, prototypeId, onShare, onDownl
               width: deviceType === 'mobile' ? 375 : deviceType === 'tablet' ? 768 : window.innerWidth,
               height: deviceType === 'mobile' ? 667 : deviceType === 'tablet' ? 1024 : window.innerHeight
             }}
-            onClose={() => setIsFeedbackMode(false)}
+            onClose={() => setIsFeedbackModeActive(false)}
             feedbackPoints={feedbackPoints}
             onFeedbackAdded={handleFeedbackAdded}
             onFeedbackUpdated={handleFeedbackUpdated}
@@ -326,4 +334,3 @@ export function SandpackPreview({ files, mainFile, prototypeId, onShare, onDownl
     </div>
   );
 }
-

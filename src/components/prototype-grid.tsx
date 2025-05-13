@@ -14,7 +14,11 @@ import { ProfileAvatar } from "./profile/profile-avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSupabase } from "@/lib/supabase-provider";
 
-export const PrototypeGrid = () => {
+interface PrototypeGridProps {
+  feedbackMode?: boolean;
+}
+
+export function PrototypeGrid({ feedbackMode = false }: PrototypeGridProps) {
   // State for view, sort, search and selection
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState("recent");
@@ -97,7 +101,7 @@ export const PrototypeGrid = () => {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-4">
       <Tabs 
         defaultValue="my" 
         value={activeTab} 
@@ -131,14 +135,16 @@ export const PrototypeGrid = () => {
             onDeleteSelected={handleDeleteSelected}
           />
 
-          <PrototypeCardList 
-            prototypes={prototypes}
-            viewMode={viewMode}
-            prototypeCollections={prototypeCollections}
-            selectedPrototypes={selectedPrototypes}
-            togglePrototypeSelection={togglePrototypeSelection}
-            collectionId={selectedCollection || undefined}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+            {prototypes.map((prototype) => (
+              <PrototypeCard 
+                key={prototype.id} 
+                prototype={prototype} 
+                onDeleteSuccess={handleDeleteSuccess}
+                feedbackMode={feedbackMode}
+              />
+            ))}
+          </div>
         </TabsContent>
         
         <TabsContent value="shared">
@@ -199,4 +205,4 @@ export const PrototypeGrid = () => {
       />
     </div>
   );
-};
+}
