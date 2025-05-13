@@ -1,5 +1,6 @@
+
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AddPrototypeDialog } from "./add-prototype-dialog";
 import { PrototypeCollections } from "./prototype/collection/PrototypeCollections";
 import { PrototypeToolbar } from "./prototype/PrototypeToolbar";
@@ -13,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileAvatar } from "./profile/profile-avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSupabase } from "@/lib/supabase-provider";
+import { PrototypeCard } from "./PrototypeCard";
 
 interface PrototypeGridProps {
   feedbackMode?: boolean;
@@ -88,6 +90,13 @@ export function PrototypeGrid({ feedbackMode = false }: PrototypeGridProps) {
     handleSelectAll, 
     handleDeleteSelected 
   } = usePrototypeSelection(prototypes);
+
+  // Handle prototype deletion success
+  const handleDeleteSuccess = () => {
+    // Refetch prototypes
+    const queryClient = useQueryClient();
+    queryClient.invalidateQueries({ queryKey: ['prototypes'] });
+  };
 
   // Loading state
   if (isLoading) {

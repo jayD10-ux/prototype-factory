@@ -13,14 +13,13 @@ import Onboarding from "./pages/Onboarding";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { useEffect, useState } from "react";
-import type { Session } from '@supabase/auth-js';
 import { supabase } from "@/integrations/supabase/client";
 
 // Create a client for React Query
 const queryClient = createQueryClient();
 
 function App() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState(null);
   const [initialized, setInitialized] = useState<boolean>(false);
 
   useEffect(() => {

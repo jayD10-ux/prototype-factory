@@ -1,5 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useDeviceType } from '@/hooks/use-device-type';
 
 interface PrototypePreviewProps {
   deploymentUrl?: string;
@@ -14,6 +15,7 @@ interface PrototypePreviewProps {
     width: number;
     height: number;
   };
+  feedbackMode?: boolean;
 }
 
 export const PrototypePreview: React.FC<PrototypePreviewProps> = ({
@@ -23,12 +25,14 @@ export const PrototypePreview: React.FC<PrototypePreviewProps> = ({
   filesUrl,
   onDownload,
   onShare,
-  originalDimensions = { width: 1920, height: 1080 } // Default dimensions
+  originalDimensions = { width: 1920, height: 1080 },
+  feedbackMode = false
 }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [aspectRatio, setAspectRatio] = useState(originalDimensions.width / originalDimensions.height);
   const [scale, setScale] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const deviceType = useDeviceType();
 
   useEffect(() => {
     // Reset iframe when URL changes
@@ -91,20 +95,35 @@ export const PrototypePreview: React.FC<PrototypePreviewProps> = ({
     <div 
       ref={containerRef}
       className={`relative w-full overflow-hidden ${className}`} 
-      style={{ aspectRatio: aspectRatio }}
+      style={{ 
+        aspectRatio: aspectRatio,
+        height: 'auto', // Let height be determined by aspect ratio
+      }}
     >
-      <iframe
-        ref={iframeRef}
-        src={deploymentUrl}
-        className="w-full h-full border-0"
-        sandbox={sandboxPermissions}
-        allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; microphone; web-share"
-        loading="lazy"
+      <div
         style={{
+          width: originalDimensions.width,
+          height: originalDimensions.height,
           transform: `scale(${scale})`,
           transformOrigin: 'top left',
         }}
-      />
+        className="relative"
+      >
+        <iframe
+          ref={iframeRef}
+          src={deploymentUrl}
+          className="w-full h-full border-0"
+          sandbox={sandboxPermissions}
+          allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; microphone; web-share"
+          loading="lazy"
+          style={{
+            width: '100%',
+            height: '100%',
+          }}
+          data-device-type={deviceType}
+          data-feedback-mode={feedbackMode ? "enabled" : "disabled"}
+        />
+      </div>
     </div>
   );
 };

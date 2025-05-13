@@ -45,6 +45,11 @@ export const SandpackPreviewAdapter = ({
   }, [user, isAuthenticated]);
 
   return (
-    <SandpackPreview />
+    <SandpackPreview 
+      files={iframeSrc || ""} 
+      mainFile={activeFile || "index.html"} 
+      prototypeId={prototypeId}
+      isFeedbackMode={enableFeedback}
+    />
   );
 };
