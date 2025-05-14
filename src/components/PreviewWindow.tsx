@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
@@ -9,7 +10,7 @@ import { Tabs } from '@/components/Tabs';
 import { FeedbackPoint } from '@/types/feedback';
 import { useSupabase } from '@/lib/supabase-provider';
 import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';  // Added the Button import
+import { Button } from '@/components/ui/button';
 
 interface PreviewWindowProps {
   url?: string | null;
@@ -43,59 +44,78 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
     try {
       // If url is provided, use it directly
       if (url) {
-        console.log("Using provided URL:", url);
+        console.log("[PreviewWindow] Using provided URL:", url);
         setPreviewUrl(url);
         setIsLoading(false);
         return;
       }
 
+      console.log("[PreviewWindow] No direct URL provided, fetching prototype:", prototypeId);
+
       // Get prototype details
       const { data: prototype, error: prototypeError } = await supabase
         .from('prototypes')
-        .select('name, file_path, deployment_status, deployment_url')
+        .select('name, file_path, deployment_status, deployment_url, preview_url, url')
         .eq('id', prototypeId)
         .single();
 
       if (prototypeError) {
+        console.error("[PreviewWindow] Error fetching prototype:", prototypeError);
         throw prototypeError;
       }
 
       if (!prototype) {
-        console.error('Error fetching prototype: no data');
+        console.error('[PreviewWindow] Error fetching prototype: no data');
         setLoadError("Failed to load prototype");
         setIsLoading(false);
         return;
       }
 
+      console.log("[PreviewWindow] Prototype data:", prototype);
       setPrototypeName(prototype.name);
       setMainFile('index.html'); // Default to index.html since we don't have main_file column yet
 
+      // Determine the best URL to use
       if (prototype.deployment_url) {
+        console.log("[PreviewWindow] Using deployment URL:", prototype.deployment_url);
         setPreviewUrl(prototype.deployment_url);
         setIsLoading(false);
+      } else if (prototype.preview_url) {
+        console.log("[PreviewWindow] Using preview URL:", prototype.preview_url);
+        setPreviewUrl(prototype.preview_url);
+        setIsLoading(false);
+      } else if (prototype.url) {
+        console.log("[PreviewWindow] Using regular URL:", prototype.url);
+        setPreviewUrl(prototype.url);
+        setIsLoading(false);
       } else if (prototype.file_path) {
+        console.log("[PreviewWindow] Using file path:", prototype.file_path);
         const { data } = await supabase
           .storage
           .from('prototype-uploads')
           .getPublicUrl(prototype.file_path);
 
+        console.log("[PreviewWindow] Generated public URL:", data.publicUrl);
         setFilesUrl(data.publicUrl);
 
         if (prototype.file_path.endsWith('.zip')) {
           // We'll use SandpackPreview for ZIP files
+          console.log("[PreviewWindow] Detected ZIP file, using SandpackPreview");
           setUseSandpack(true);
         } else {
           // For direct HTML files, we can use the URL directly
+          console.log("[PreviewWindow] Using direct file URL for preview");
           setPreviewUrl(data.publicUrl);
         }
         
         setIsLoading(false);
       } else {
+        console.log("[PreviewWindow] No preview options available");
         setLoadError("No preview available");
         setIsLoading(false);
       }
     } catch (error) {
-      console.error("Error loading preview:", error);
+      console.error("[PreviewWindow] Error loading preview:", error);
       setLoadError("Failed to load preview");
       setIsLoading(false);
     }
@@ -146,7 +166,7 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
       setFeedbackPoints(points);
       setFeedbackUsers(users);
     } catch (error: any) {
-      console.error('Error fetching feedback:', error);
+      console.error('[PreviewWindow] Error fetching feedback:', error);
       toast({
         title: "Error",
         description: "Failed to load feedback points",
@@ -195,7 +215,7 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
         description: "Feedback added successfully"
       });
     } catch (error: any) {
-      console.error('Error adding feedback:', error);
+      console.error('[PreviewWindow] Error adding feedback:', error);
       toast({
         title: "Error",
         description: "Failed to add feedback",
@@ -228,7 +248,7 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
         description: "Feedback updated successfully"
       });
     } catch (error: any) {
-      console.error('Error updating feedback:', error);
+      console.error('[PreviewWindow] Error updating feedback:', error);
       toast({
         title: "Error",
         description: "Failed to update feedback",
@@ -291,7 +311,7 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
               isFeedbackMode={isFeedbackMode}
               onToggleFeedbackMode={toggleFeedbackMode}
             />
-          ) : (
+          ) : previewUrl ? (
             <iframe 
               ref={iframeRef}
               src={previewUrl} 
@@ -301,6 +321,15 @@ export function PreviewWindow({ prototypeId, url, onShare }: PreviewWindowProps)
               allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; usb; xr-spatial-tracking"
               loading="lazy"
             />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center p-6 max-w-md">
+                <h3 className="text-lg font-medium mb-2">No preview available</h3>
+                <p className="text-muted-foreground">
+                  There is no URL available to preview this prototype.
+                </p>
+              </div>
+            </div>
           )}
         </div>
       )

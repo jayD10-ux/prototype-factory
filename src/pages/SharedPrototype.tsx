@@ -44,6 +44,11 @@ export default function SharedPrototype() {
           setError("Prototype not found");
         } else {
           console.log("[SharedPrototype] Prototype data retrieved:", data);
+          // Log the URLs to help with debugging
+          console.log("[SharedPrototype] Preview URL:", data.preview_url);
+          console.log("[SharedPrototype] Deployment URL:", data.deployment_url);
+          console.log("[SharedPrototype] Regular URL:", data.url);
+          
           setPrototype(data);
         }
       } catch (err: any) {
@@ -98,6 +103,10 @@ export default function SharedPrototype() {
     );
   }
 
+  // Determine the best URL to use for the preview
+  const previewUrl = prototype.deployment_url || prototype.preview_url || prototype.url;
+  console.log("[SharedPrototype] Using URL for preview:", previewUrl);
+
   return (
     <div className="fixed inset-0 flex flex-col">
       {/* Header */}
@@ -135,10 +144,27 @@ export default function SharedPrototype() {
 
       {/* Prototype Preview */}
       <div className="flex-1 overflow-hidden">
-        <PreviewWindow 
-          prototypeId={id || ''} 
-          url={prototype.deployment_url || prototype.url} 
-        />
+        {previewUrl ? (
+          <PreviewWindow 
+            prototypeId={id || ''} 
+            url={previewUrl} 
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center p-6 max-w-md">
+              <h3 className="text-lg font-medium mb-2">No preview available</h3>
+              <p className="text-muted-foreground mb-4">
+                This prototype doesn't have a preview URL or deployment URL set.
+              </p>
+              {prototype.file_path && (
+                <p className="text-sm bg-muted p-2 rounded">
+                  The prototype has files uploaded but no preview is available yet. 
+                  This might be because it's still processing or there was an issue with deployment.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
