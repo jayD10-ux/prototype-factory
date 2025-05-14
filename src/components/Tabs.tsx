@@ -1,10 +1,10 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface Tab {
   id: string;
-  label: React.ReactNode;
+  label: string;
   content: React.ReactNode;
 }
 
@@ -15,28 +15,39 @@ interface TabsProps {
   className?: string;
 }
 
-export function Tabs({ tabs, activeTab, onTabChange, className }: TabsProps) {
+export const Tabs = ({ tabs, activeTab, onTabChange, className }: TabsProps) => {
   return (
-    <div className={cn("flex flex-col h-full", className)}>
-      <div className="flex border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+    <div className={cn('flex flex-col h-full', className)}>
+      <div className="flex border-b">
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => onTabChange(tab.id)}
             className={cn(
-              "px-4 py-2 text-sm font-medium transition-colors",
+              'px-4 py-2 text-sm font-medium transition-colors focus:outline-none',
               activeTab === tab.id
-                ? "border-b-2 border-primary text-foreground"
-                : "text-muted-foreground hover:text-foreground"
+                ? 'border-b-2 border-primary text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
             )}
+            onClick={() => onTabChange(tab.id)}
           >
             {tab.label}
           </button>
         ))}
       </div>
-      <div className="flex-1 overflow-auto">
-        {tabs.find(tab => tab.id === activeTab)?.content}
+      
+      <div className="flex-1 overflow-hidden">
+        {tabs.map((tab) => (
+          <div
+            key={tab.id}
+            className={cn(
+              'h-full',
+              activeTab === tab.id ? 'block' : 'hidden'
+            )}
+          >
+            {tab.content}
+          </div>
+        ))}
       </div>
     </div>
   );
-}
+};

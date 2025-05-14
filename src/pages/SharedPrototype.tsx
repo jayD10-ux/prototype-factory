@@ -1,10 +1,11 @@
 
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft, ExternalLink } from "lucide-react";
+import { PreviewWindow } from "@/components/PreviewWindow";
 
 export default function SharedPrototype() {
   const { id } = useParams<{ id: string }>();
@@ -12,6 +13,7 @@ export default function SharedPrototype() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPrototype = async () => {
@@ -25,19 +27,10 @@ export default function SharedPrototype() {
         console.log("[SharedPrototype] Fetching prototype:", id);
         setLoading(true);
         
-        // First try to fix RLS policies to ensure access works correctly
-        try {
-          console.log("[SharedPrototype] Calling fix-rls function");
-          await supabase.functions.invoke('fix-rls');
-          console.log("[SharedPrototype] RLS policies updated");
-        } catch (rlsError) {
-          console.error("[SharedPrototype] Error fixing RLS (continuing anyway):", rlsError);
-        }
-        
         // Fetch the prototype with error handling
         const { data, error: fetchError } = await supabase
           .from('prototypes')
-          .select('*')
+          .select('*, profiles:created_by(*)')
           .eq('id', id)
           .maybeSingle();
 
@@ -106,24 +99,47 @@ export default function SharedPrototype() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-4">{prototype.name}</h1>
-      {prototype.description && <p className="mb-6">{prototype.description}</p>}
-      
-      {prototype.url ? (
+    <div className="fixed inset-0 flex flex-col">
+      {/* Header */}
+      <div className="bg-background p-3 flex items-center border-b">
         <Button 
-          onClick={() => window.open(prototype.url, "_blank")}
-          className="mb-4"
+          variant="ghost" 
+          size="icon" 
+          onClick={() => window.history.back()}
+          className="mr-2"
         >
-          View Prototype
+          <ArrowLeft className="h-4 w-4" />
         </Button>
-      ) : (
-        <p className="text-muted-foreground">This prototype is still being processed...</p>
-      )}
-      
-      <Button variant="outline" onClick={() => window.history.back()} className="mt-4">
-        Go Back
-      </Button>
+        
+        <div className="flex-1">
+          <h1 className="text-lg font-medium">{prototype.name}</h1>
+          {prototype.profiles && (
+            <p className="text-xs text-muted-foreground">
+              Created by {prototype.profiles.name || 'Unknown'}
+            </p>
+          )}
+        </div>
+        
+        {prototype.url && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => window.open(prototype.url, "_blank")}
+            className="ml-auto flex items-center gap-1"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            <span>External Link</span>
+          </Button>
+        )}
+      </div>
+
+      {/* Prototype Preview */}
+      <div className="flex-1 overflow-hidden">
+        <PreviewWindow 
+          prototypeId={id || ''} 
+          url={prototype.deployment_url || prototype.url} 
+        />
+      </div>
     </div>
   );
 }

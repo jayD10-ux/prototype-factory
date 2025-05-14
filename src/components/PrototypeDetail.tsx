@@ -5,10 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import { PreviewWindow } from "./PreviewWindow";
 import { ShareDialog } from "./prototype/sharing/ShareDialog";
 import { useToast } from "@/hooks/use-toast";
-import { RefreshCw, AlertTriangle, User } from "lucide-react";
+import { RefreshCw, AlertTriangle } from "lucide-react";
 import { Button } from "./ui/button";
 import { useSupabase } from "@/lib/supabase-provider";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 export const PrototypeDetail = () => {
   const { id } = useParams();
@@ -42,7 +41,6 @@ export const PrototypeDetail = () => {
         throw error;
       }
 
-      // All prototypes are public now
       if (!data) {
         toast({
           variant: "destructive",
@@ -103,22 +101,9 @@ export const PrototypeDetail = () => {
     );
   }
 
-  const creatorName = prototype.profiles?.name || 'Anonymous';
-  const isCreator = false;
-
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden">
-      {/* Only show creator info if the viewer is not the creator */}
-      <div className="bg-background p-2 flex items-center border-b">
-        <div className="flex items-center gap-2">
-          <Avatar className="h-7 w-7">
-            <AvatarFallback>
-              <User className="h-4 w-4" />
-            </AvatarFallback>
-          </Avatar>
-          <span className="text-sm font-medium">Public Prototype</span>
-        </div>
-      </div>
+      {/* Header already handled by layout */}
       
       <div className="flex-1 min-h-0 relative">
         <div className="absolute inset-0">
