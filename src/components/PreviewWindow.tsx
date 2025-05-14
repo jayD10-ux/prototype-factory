@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
@@ -10,6 +9,7 @@ import { Tabs } from '@/components/Tabs';
 import { FeedbackPoint } from '@/types/feedback';
 import { useSupabase } from '@/lib/supabase-provider';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';  // Added the Button import
 
 interface PreviewWindowProps {
   url?: string | null;
